@@ -21,13 +21,17 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Co
 /// <param name="productQueryService">
 ///     The service for handling product-related queries.
 /// </param>
+/// <param name="careGuideQueryService">
+///     The service for handling care guide-related queries.
+/// </param>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces(MediaTypeNames.Application.Json)]
 [SwaggerTag("Available endpoints for products.")]
 public class ProductsController(
         IProductCommandService productCommandService,
-        IProductQueryService productQueryService
+        IProductQueryService productQueryService,
+        ICareGuideQueryService careGuideQueryService
     ) : ControllerBase
 {
     /// <summary>
@@ -55,6 +59,30 @@ public class ProductsController(
         return Ok(productResource);
     }
     
+    /// <summary>
+    ///     Endpoint to retrieve the care guide associated with a product.
+    /// </summary>
+    /// <param name="id">
+    ///     The unique identifier of the product whose care guide is requested.
+    /// </param>
+    /// <returns>
+    ///     The care guide linked to the specified product, or a 404 Not Found response if none exists.
+    /// </returns>
+    [HttpGet("{id}/care-guides")]
+    [SwaggerOperation(
+        Summary = "Get care guide by product ID.",
+        Description = "Retrieves the care guide assigned to a specific product.",
+        OperationId = "GetCareGuideByProductId")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Care guide returned successfully.", typeof(CareGuideResource))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Care guide for the specified product ID was not found.")]
+    public async Task<IActionResult> GetCareGuideByProductId([FromRoute] string id)
+    {
+        var careGuide = await careGuideQueryService.Handle(new GetCareGuideByProductIdQuery(id));
+        if (careGuide is null) return NotFound($"Care guide for product ID {id} not found.");
+        var resource = CareGuideResourceFromEntityAssembler.ToResourceFromEntity(careGuide);
+        return Ok(resource);
+    }
+
     /// <summary>
     ///     Endpoint to handle the retrieval of all products by a given supplier id.
     /// </summary>

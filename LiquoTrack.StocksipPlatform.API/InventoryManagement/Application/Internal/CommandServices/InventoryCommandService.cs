@@ -19,7 +19,8 @@ public class InventoryCommandService(
         IProductRepository productRepository,
         IWarehouseRepository warehouseRepository,
         IInventoryRepository inventoryRepository,
-        IProductExitRepository productExitRepository
+        IProductExitRepository productExitRepository,
+        IProductTransferRepository productTransferRepository
     ) : IInventoryCommandService
 {
     /// <summary>
@@ -112,8 +113,10 @@ public class InventoryCommandService(
         var productToUpdate = await productRepository.FindByIdAsync(command.ProductId.ToString()) 
                               ?? throw new ArgumentException($"Product with ID {command.ProductId} does not exist.");
         
+        // Updates the product 'totalStockInWarehouse' field
         productToUpdate.UpdateTotalStockInStore(productToUpdate.GetStockInStorage() + command.QuantityToAdd);
         
+        // Updates the product in the repository.
         await productRepository.UpdateAsync(productToUpdate.Id.ToString(), productToUpdate);
         
         // Updates the inventory in the repository.
@@ -158,17 +161,20 @@ public class InventoryCommandService(
             productToUpdate.Id.ToString(),
             productToUpdate.Name,
             warehouse.Id.ToString(),
-            command.ExpirationDate.ToString(),
             warehouse.Name,
             command.ExitType,
             command.QuantityToDecrease,
-            inventoryToUpdate.GetStock() + command.QuantityToDecrease
+            inventoryToUpdate.GetStock() + command.QuantityToDecrease,
+            command.ExpirationDate.ToString()
         );
         
+        // Updates the product 'totalStockInWarehouse' field
         productToUpdate.UpdateTotalStockInStore(productToUpdate.GetStockInStorage() - command.QuantityToDecrease);
 
+        // Updates the product exit record
         await productExitRepository.AddAsync(productExit);
         
+        // Updates the product in the repository.
         await productRepository.UpdateAsync(productToUpdate.Id.ToString(), productToUpdate);
         
         // Updates the inventory in the repository.
@@ -216,17 +222,19 @@ public class InventoryCommandService(
             productToUpdate.Id.ToString(),
             productToUpdate.Name,
             warehouse.Id.ToString(),
-            null,
             warehouse.Name,
             command.ExitType,
             command.QuantityToDecrease,
             inventoryToUpdate.GetStock() + command.QuantityToDecrease
         );
         
+        // Updates the product 'totalStockInWarehouse' field
         productToUpdate.UpdateTotalStockInStore(productToUpdate.GetStockInStorage() - command.QuantityToDecrease);
         
+        // Updates the product exit record
         await productExitRepository.AddAsync(productExit);
         
+        // Updates the product in the repository.
         await productRepository.UpdateAsync(productToUpdate.Id.ToString(), productToUpdate);
         
         // Updates the inventory in the repository.
@@ -253,6 +261,10 @@ public class InventoryCommandService(
         // Validate if the product to be moved exists.
         var movedProduct = await productRepository.FindByIdAsync(command.ProductId.ToString())
                            ?? throw new ArgumentException($"Product with ID {command.ProductId} does not exist.");
+        
+        // Validate if the original warehouse exists.
+        var originWarehouse = await warehouseRepository.FindByIdAsync(command.OriginWarehouseId.ToString()) 
+                            ?? throw new ArgumentException($"Warehouse with ID {command.OriginWarehouseId} does not exist.");
         
         // Validate if the new warehouse where the product will be moved exists.
         var newWarehouse = await warehouseRepository.FindByIdAsync(command.DestinationWarehouseId.ToString())
@@ -322,6 +334,22 @@ public class InventoryCommandService(
             await inventoryRepository.UpdateAsync(destinationInventory.Id.ToString(), destinationInventory);
         }
 
+        // Creates a new product transfer record.
+        var transferRecord = new ProductTransfer(
+            movedProduct.Id.ToString(),
+            movedProduct.Name,
+            originWarehouse.Id.ToString(),
+            originWarehouse.Name,
+            newWarehouse.Id.ToString(),
+            newWarehouse.Name,
+            command.QuantityToTransfer,
+            currentInventory.GetStock() - command.QuantityToTransfer,
+            destinationInventory.GetStock()
+        );
+        
+        // Adds the product transfer record to the repository.
+        await productTransferRepository.AddAsync(transferRecord);
+        
         // Publishes the events related to the destination inventory.
         await inventoryRepository.PublishEventsAsync(destinationInventory);
 

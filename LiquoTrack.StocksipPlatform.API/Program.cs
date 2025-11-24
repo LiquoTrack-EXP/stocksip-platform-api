@@ -275,6 +275,9 @@ builder.Services.AddScoped<IBrandQueryService, BrandQueryService>();
 builder.Services.AddScoped<IProductExitQueryService, ProductExitQueryService>();
 builder.Services.AddScoped<IProductExitRepository, ProductExitRepository>();
 
+builder.Services.AddScoped<IProductTransferQueryService, ProductTransferQueryService>();
+builder.Services.AddScoped<IProductTransferRepository, ProductTransferRepository>();
+
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductQueryService, ProductQueryService>();
 builder.Services.AddScoped<IProductCommandService, ProductCommandService>();

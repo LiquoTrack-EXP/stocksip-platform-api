@@ -26,13 +26,18 @@ public class ProductRepository(AppDbContext context, IMediator mediator) : BaseR
     /// <param name="name">
     ///     The name of the product to check for existence.
     /// </param>
+    /// <param name="accountId">
+    ///     The ID of the account to check for existence.
+    /// </param>
     /// <returns>
     ///     True if a product with the specified name exists; otherwise, false.
     /// </returns>
-    public async Task<bool> ExistsByNameAsync(ProductName name)
+    public async Task<bool> ExistsByNameAndAccountIdAsync(ProductName name, AccountId accountId)
     {
         return await _productCollection
-            .Find(x => x.Name == name.GetValue())
+            .Find(x => 
+                x.Name == name.GetValue() && 
+                x.AccountId.GetId == accountId.GetId)
             .AnyAsync();
     }
 

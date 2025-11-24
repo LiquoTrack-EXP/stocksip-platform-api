@@ -111,6 +111,9 @@ public class Product(
         if (totalStockInStore < 0)
             throw new ArgumentException("Total stock in store cannot be negative.", nameof(totalStockInStore));
 
+        if (totalStockInStore > 0) StoreProduct();
+        if (totalStockInStore == 0) IsInWarehouse = false;
+        
         TotalStockInStore = totalStockInStore;
     }
     

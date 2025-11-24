@@ -36,11 +36,11 @@ public class ProductExit(
     string productId, 
     string productName, 
     string warehouseId,
-    string? expirationDate,
     string warehouseName, 
     EProductExitReasons exitType,
     int outputQuantity,
-    int previousQuantity
+    int previousQuantity,
+    string? expirationDate = ""
 ) : Entity 
 {
     /// <summary>
@@ -56,7 +56,7 @@ public class ProductExit(
     /// <summary>
     ///     The expiration date of the product that was exited if applicable.
     /// </summary>
-    public string? ExpirationDate { get; private set; } = expirationDate;
+    public string? ExpirationDate { get; private set; } = expirationDate ?? string.Empty;
     
     /// <summary>
     ///     The ID of the warehouse from which the product was exited.

@@ -73,7 +73,7 @@ public class MercadoPagoService : IMercadoPagoService
                 Failure = "stocksip://payment/failure",
                 Pending = "stocksip://payment/pending"
             },
-            NotificationUrl = "https://stocksip-backend.azurewebsites.net/api/v1/subscriptions",
+            NotificationUrl = "https://stocksip-back-end.azurewebsites.net/api/v1/subscriptions",
             AutoReturn = "approved",
             Metadata = new Dictionary<string, object>
             {

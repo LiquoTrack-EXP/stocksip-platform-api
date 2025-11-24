@@ -82,12 +82,19 @@ public class CareGuideRepository : BaseRepository<CareGuide>, ICareGuideReposito
     /// <returns>A collection of care guides for the specified product.</returns>
     public async Task<IEnumerable<CareGuide>> GetAllByProductId(string productId)
     {
-        if (string.IsNullOrEmpty(productId) || !ObjectId.TryParse(productId, out var productObjectId))
+        if (string.IsNullOrWhiteSpace(productId))
             return Enumerable.Empty<CareGuide>();
-            
-        return await _careGuideCollection
-            .Find(x => x.ProductAssociated != null && x.ProductAssociated.Id == productObjectId)
-            .ToListAsync();
+
+        var hasMongoId = ObjectId.TryParse(productId, out var productObjectId);
+
+        var filter = hasMongoId
+            ? Builders<CareGuide>.Filter.Or(
+                Builders<CareGuide>.Filter.Where(x => x.ProductAssociated != null && x.ProductAssociated.Id == productObjectId),
+                Builders<CareGuide>.Filter.Eq(x => x.ProductId, productId)
+              )
+            : Builders<CareGuide>.Filter.Eq(x => x.ProductId, productId);
+
+        return await _careGuideCollection.Find(filter).ToListAsync();
     }
     /// <param name="accountId">The account ID to find the care guide for.</param>
     /// <param name="productType">The product type to find the care guide for.</param>

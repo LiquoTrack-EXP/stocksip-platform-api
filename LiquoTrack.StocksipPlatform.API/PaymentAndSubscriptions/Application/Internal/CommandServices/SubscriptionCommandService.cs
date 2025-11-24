@@ -180,7 +180,7 @@ public class SubscriptionCommandService(
             quantity: 1,
             command.AccountId,
             DateTime.Now,
-            DateTime.Now.AddMinutes(1)
+            DateTime.Now.AddMinutes(15)
         );
 
         currentSubscription.MarkAsPendingUpgrade(command.NewPlanId, paymentPreference.PreferenceId);
