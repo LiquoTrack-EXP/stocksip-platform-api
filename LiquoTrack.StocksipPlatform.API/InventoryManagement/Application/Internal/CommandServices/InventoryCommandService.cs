@@ -347,7 +347,8 @@ public class InventoryCommandService(
             newWarehouse.Name,
             command.QuantityToTransfer,
             currentInventory.GetStock() - command.QuantityToTransfer,
-            destinationInventory.GetStock()
+            destinationInventory.GetStock(),
+            command.ExpirationDate.GetValueOrDefault().ToString("yyyy-MM-dd")
         );
         
         // Adds the product transfer record to the repository.
