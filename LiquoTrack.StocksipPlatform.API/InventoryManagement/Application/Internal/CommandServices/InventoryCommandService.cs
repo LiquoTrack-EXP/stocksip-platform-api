@@ -101,7 +101,7 @@ public class InventoryCommandService(
         if (inventory == null)
         {
             var productStock = new ProductStock(command.QuantityToAdd);
-            var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock);
+            var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock, null);
             await inventoryRepository.AddAsync(newInventory);
             return newInventory;
         }
@@ -156,6 +156,8 @@ public class InventoryCommandService(
         var productToUpdate = await productRepository.FindByIdAsync(command.ProductId.ToString()) 
                               ?? throw new ArgumentException($"Product with ID {command.ProductId} does not exist.");
         
+        var expirationString = command.ExpirationDate?.GetValue().ToString(); 
+        
         // Creates a new product exit record
         var productExit = new ProductExit(
             productToUpdate.Id.ToString(),
@@ -165,7 +167,7 @@ public class InventoryCommandService(
             command.ExitType,
             command.QuantityToDecrease,
             inventoryToUpdate.GetStock() + command.QuantityToDecrease,
-            command.ExpirationDate.ToString()
+            expirationString
         );
         
         // Updates the product 'totalStockInWarehouse' field
@@ -225,7 +227,8 @@ public class InventoryCommandService(
             warehouse.Name,
             command.ExitType,
             command.QuantityToDecrease,
-            inventoryToUpdate.GetStock() + command.QuantityToDecrease
+            inventoryToUpdate.GetStock() + command.QuantityToDecrease,
+            null
         );
         
         // Updates the product 'totalStockInWarehouse' field
@@ -344,7 +347,8 @@ public class InventoryCommandService(
             newWarehouse.Name,
             command.QuantityToTransfer,
             currentInventory.GetStock() - command.QuantityToTransfer,
-            destinationInventory.GetStock()
+            destinationInventory.GetStock(),
+            command.ExpirationDate.GetValueOrDefault().ToString("yyyy-MM-dd")
         );
         
         // Adds the product transfer record to the repository.

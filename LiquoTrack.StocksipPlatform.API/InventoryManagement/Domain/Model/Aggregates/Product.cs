@@ -128,13 +128,26 @@ public class Product(
     /// <param name="command">
     ///     The command containing the new product information. 
     /// </param>
-    public void UpdateInformation(UpdateProductInformationCommand command, string imageUrl) 
+    /// <param name="imageUrl">
+    ///     The new image url of the product.
+    /// </param>
+    public void UpdateInformation(UpdateProductInformationCommand command, string imageUrl)
     {
-        Name = command.Name;
-        UnitPrice = command.UnitPrice;
-        MinimumStock = command.MinimumStock;
-        ImageUrl = new ImageUrl(imageUrl);
-    }
+        if (command.Name is not null)
+            Name = command.Name;
+
+        if (command.UnitPrice is not null)
+            UnitPrice = command.UnitPrice;
+
+        if (command.MinimumStock is not null)
+            MinimumStock = command.MinimumStock;
+    
+        if (command.Content is not null)
+            Content = command.Content;
+        
+        if (command.Image is not null)
+            ImageUrl = new ImageUrl(imageUrl);
+    }   
     
     /// <summary>
     ///     Getter method for the total stock in store.

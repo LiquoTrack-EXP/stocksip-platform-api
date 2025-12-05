@@ -64,7 +64,7 @@ public class InventoriesController(
     /// <returns>
     ///     A 204 No Content response if the inventory was deleted successfully, or a 404 Not Found response if the inventory was not found.
     /// </returns>
-    [HttpDelete]
+    [HttpDelete("{inventoryId}")]
     [SwaggerOperation(
         Summary = "Delete inventory by ID.",
         Description = "Deletes an inventory by its unique identifier.",

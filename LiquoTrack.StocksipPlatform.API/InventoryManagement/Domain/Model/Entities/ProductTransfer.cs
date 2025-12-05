@@ -45,7 +45,7 @@ public class ProductTransfer(
     int transferredStock, 
     int originWarehouseRemainingStock,
     int destinationWarehouseResultingStock,
-    string? expirationDate = ""
+    string? expirationDate
 ) : Entity
 {
     public string ProductId { get; private set; } = productId;

@@ -92,32 +92,32 @@ public class ProductCommandService(
         // Verifies that the product exists.
         var productToUpdate = await productRepository.FindByIdAsync(command.ProductId.ToString())
                               ?? throw new ProductFailedUpdateException($"Could not find the product to update with identifier ${command.ProductId.ToString()}.");
-        
+    
+        // Gets current image URL
         var currentImageUrl = await productRepository.FindImageUrlByProductIdAsync(command.ProductId);
         var imageUrl = currentImageUrl;
 
+        // Updates image only if a new one is provided
         if (command.Image != null)
         {
             inventoryImageService.DeleteImage(currentImageUrl);
             imageUrl = inventoryImageService.UploadImage(command.Image);
         }
-        
-        // Updates the product with the given details.
+    
+        // Updates the product partially
         productToUpdate.UpdateInformation(command, imageUrl);
 
-        // Tries to update the product in the repository.
+        // Updates in repository
         try
         {
             await productRepository.UpdateAsync(command.ProductId.ToString(), productToUpdate);
         }
-        // If the product could not be updated, throws an exception.
         catch (ProductFailedUpdateException e)
         {
             Console.WriteLine(e);
             throw;
         }
-        
-        // Returns the updated product.
+    
         return productToUpdate;
     }
 
