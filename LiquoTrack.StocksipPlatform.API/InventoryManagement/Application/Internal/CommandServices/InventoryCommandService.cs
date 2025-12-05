@@ -156,6 +156,8 @@ public class InventoryCommandService(
         var productToUpdate = await productRepository.FindByIdAsync(command.ProductId.ToString()) 
                               ?? throw new ArgumentException($"Product with ID {command.ProductId} does not exist.");
         
+        var expirationString = command.ExpirationDate?.GetValue().ToString(); 
+        
         // Creates a new product exit record
         var productExit = new ProductExit(
             productToUpdate.Id.ToString(),
@@ -165,7 +167,7 @@ public class InventoryCommandService(
             command.ExitType,
             command.QuantityToDecrease,
             inventoryToUpdate.GetStock() + command.QuantityToDecrease,
-            command.ExpirationDate.ToString()
+            expirationString
         );
         
         // Updates the product 'totalStockInWarehouse' field
@@ -225,7 +227,8 @@ public class InventoryCommandService(
             warehouse.Name,
             command.ExitType,
             command.QuantityToDecrease,
-            inventoryToUpdate.GetStock() + command.QuantityToDecrease
+            inventoryToUpdate.GetStock() + command.QuantityToDecrease,
+            null
         );
         
         // Updates the product 'totalStockInWarehouse' field

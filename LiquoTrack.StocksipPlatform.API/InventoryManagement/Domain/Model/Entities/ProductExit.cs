@@ -40,7 +40,7 @@ public class ProductExit(
     EProductExitReasons exitType,
     int outputQuantity,
     int previousQuantity,
-    string? expirationDate = ""
+    string? expirationDate
 ) : Entity 
 {
     /// <summary>
