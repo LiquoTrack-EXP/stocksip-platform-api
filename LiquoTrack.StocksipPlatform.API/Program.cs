@@ -43,6 +43,7 @@ using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.
 using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Configuration.Namings;
 using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Repositories;
 using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Seeding;
+using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.ModelBinding;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
@@ -120,7 +121,11 @@ var env = builder.Environment;
 
 // Services 
 builder.Services.AddRouting(o => o.LowercaseUrls = true);
-builder.Services.AddControllers(options => options.Conventions.Add(new KebabCaseRouteNamingConvention()));
+builder.Services.AddControllers(options => 
+{
+    options.Conventions.Add(new KebabCaseRouteNamingConvention());
+    options.ModelBinderProviders.Insert(0, new OptionalFormFileModelBinderProvider());
+});
 builder.Services.AddEndpointsApiExplorer();
 
 // HttpContextAccessor
