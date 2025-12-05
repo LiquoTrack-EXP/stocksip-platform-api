@@ -34,11 +34,11 @@ public class ProductRepository(AppDbContext context, IMediator mediator) : BaseR
     /// </returns>
     public async Task<bool> ExistsByNameAndAccountIdAsync(ProductName name, AccountId accountId)
     {
-        return await _productCollection
-            .Find(x => 
-                x.Name == name.GetValue() && 
-                x.AccountId.GetId == accountId.GetId)
-            .AnyAsync();
+        var filter = Builders<Product>.Filter.And(
+            Builders<Product>.Filter.Eq("AccountId", accountId.GetId),
+            Builders<Product>.Filter.Eq("Name", name.GetValue())
+        );
+        return await _productCollection.Find(filter).AnyAsync();
     }
 
     /// <summary>
