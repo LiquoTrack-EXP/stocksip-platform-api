@@ -101,7 +101,7 @@ public class InventoryCommandService(
         if (inventory == null)
         {
             var productStock = new ProductStock(command.QuantityToAdd);
-            var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock);
+            var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock, null);
             await inventoryRepository.AddAsync(newInventory);
             return newInventory;
         }
