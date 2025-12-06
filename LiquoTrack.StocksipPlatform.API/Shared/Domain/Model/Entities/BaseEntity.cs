@@ -30,13 +30,22 @@ public abstract class Entity
     ///     The list of events related to the entity
     /// </summary>
     [BsonIgnore]
-    private readonly List<IDomainEvent> _domainEvents = [];
+    private List<IDomainEvent> _domainEvents;
+    
+    /// <summary>
+    /// Constructor to initialize the entity.
+    /// </summary>
+    protected Entity()
+    {
+        _domainEvents = [];
+    }
     
     /// <summary>
     ///     The read-only collection of domain events associated with the entity.
     /// </summary>
     [BsonIgnore]
-    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => (_domainEvents ??= []).AsReadOnly();
+
     
     /// <summary>
     ///     Method to add a domain event to the entity.
@@ -46,7 +55,8 @@ public abstract class Entity
     /// </param>
     protected void AddDomainEvent(IDomainEvent eventItem)
     {
-        _domainEvents.Add(eventItem);
+        if (eventItem == null) return;
+        (_domainEvents ??= []).Add(eventItem);
     }
 
     /// <summary>
@@ -54,6 +64,6 @@ public abstract class Entity
     /// </summary>
     public void ClearDomainEvents()
     {
-        _domainEvents.Clear();
+        (_domainEvents ??= []).Clear();
     }
 }

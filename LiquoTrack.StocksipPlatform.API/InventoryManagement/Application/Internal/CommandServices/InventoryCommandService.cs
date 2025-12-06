@@ -247,7 +247,7 @@ public class InventoryCommandService(
                 command.ExitType,
                 command.QuantityToDecrease,
             inventoryToUpdate.GetStock() + command.QuantityToDecrease,
-            null
+                "No date"
             );
         
             // Updates the product exit record
@@ -326,9 +326,6 @@ public class InventoryCommandService(
             // Updates the inventory in the repository.
             await inventoryRepository.UpdateAsync(currentInventory.Id.ToString(), currentInventory);
         
-            // Publishes the events related to the inventory.
-            await inventoryRepository.PublishEventsAsync(currentInventory);
-        
             // Initializes a new inventory object with the new warehouse and the moved stock expiration date.
             Inventory? destinationInventory = null;
             var destinationExists = false;
@@ -396,6 +393,9 @@ public class InventoryCommandService(
             // Adds the product transfer record to the repository.
             await productTransferRepository.AddAsync(transferRecord);
         
+            // Publishes the events related to the inventory.
+            await inventoryRepository.PublishEventsAsync(currentInventory);
+            
             // Publishes the events related to the destination inventory.
             await inventoryRepository.PublishEventsAsync(destinationInventory);
 
