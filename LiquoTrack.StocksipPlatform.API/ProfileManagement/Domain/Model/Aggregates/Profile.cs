@@ -35,7 +35,7 @@ public class Profile : Entity
     /// <summary>
     /// Gets the profile picture URL.
     /// </summary>
-    public ImageUrl ProfilePictureUrl { get; private set; }
+    public ImageUrl? ProfilePictureUrl { get; private set; }
 
     /// <summary>
     /// Gets the user ID associated with this profile.
@@ -63,14 +63,14 @@ public class Profile : Entity
         PersonName name,
         PersonContactNumber personContactNumber,
         string contactNumber,
-        ImageUrl profilePictureUrl,
+        ImageUrl? profilePictureUrl,
         string userId,
         string assignedRole)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         PersonContactNumber = personContactNumber ?? throw new ArgumentNullException(nameof(personContactNumber));
         ContactNumber = contactNumber ?? throw new ArgumentNullException(nameof(contactNumber));
-        ProfilePictureUrl = profilePictureUrl ?? throw new ArgumentNullException(nameof(profilePictureUrl));
+        ProfilePictureUrl = profilePictureUrl;
 
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("User ID cannot be null or whitespace.", nameof(userId));
