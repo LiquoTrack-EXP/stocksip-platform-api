@@ -210,6 +210,8 @@ public class WarehouseProductsController(
         if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
         if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
 
+        if (resource is null) throw new OperationCanceledException("Resource is null.");
+        
         Inventory? inventory;
         if (resource.ExpirationDate.HasValue)
         {
@@ -261,14 +263,15 @@ public class WarehouseProductsController(
         if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
         if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
         
+        if (resource is null) throw new OperationCanceledException("Resource is null.");
+        
         Inventory? inventory = null;
         if (resource.ExpirationDate.HasValue)
         {
             var cmd = DecreaseProductsFromWarehouseCommandFromResourceAssembler.ToCommandFromResource(resource, productId, warehouseId);
             inventory = await inventoryCommandService.Handle(cmd);
         }
-        
-        if (!resource.ExpirationDate.HasValue)
+        else
         {
             var cmd = DecreaseProductsFromWarehouseCommandFromResourceAssembler.ToCommandFromResourceWithoutExpirationDate(resource, productId, warehouseId);
             inventory = await inventoryCommandService.Handle(cmd);
@@ -314,6 +317,8 @@ public class WarehouseProductsController(
         if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
         if (!ObjectId.TryParse(resource.DestinationWarehouseId, out var destinationWarehouseObjId)) return BadRequest("Invalid destination warehouse ID.");
 
+        if (resource is null) throw new OperationCanceledException("Resource is null.");
+        
         var product = await productQueryService.Handle(new GetProductByIdQuery(productObjId));
         if (product is null) return NotFound("Product not found.");
 
