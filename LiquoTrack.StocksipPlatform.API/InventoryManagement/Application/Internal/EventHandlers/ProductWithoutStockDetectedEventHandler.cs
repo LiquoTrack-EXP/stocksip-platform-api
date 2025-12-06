@@ -37,45 +37,58 @@ public class ProductWithoutStockDetectedEventHandler(
     
     private async Task<string> On(ProductWithoutStockDetectedEvent domainEvent)
     {
-        Inventory inventory;
-
-        if (domainEvent.ExpirationDate != null)
+        try
         {
-            inventory = await inventoryRepository
-                .GetByProductIdWarehouseIdAndExpirationDateAsync(
-                    new ObjectId(domainEvent.ProductId),
-                    new ObjectId(domainEvent.WarehouseId),
-                    domainEvent.ExpirationDate
-                ) ?? throw new ArgumentException("The inventory does not exist.");
+            Inventory? inventory;
+
+            if (domainEvent.ExpirationDate != null)
+            {
+                inventory = await inventoryRepository
+                    .GetByProductIdWarehouseIdAndExpirationDateAsync(
+                        new ObjectId(domainEvent.ProductId),
+                        new ObjectId(domainEvent.WarehouseId),
+                        domainEvent.ExpirationDate
+                    );
+            }
+            else
+            {
+                inventory = await inventoryRepository
+                    .GetByProductIdWarehouseIdAsync(
+                        new ObjectId(domainEvent.ProductId),
+                        new ObjectId(domainEvent.WarehouseId)
+                    );
+            }
+
+            if (inventory == null)
+            {
+                Console.WriteLine("[EventHandler] Inventory does not exist for event " + domainEvent.GetType().Name);
+                return "EventHandler error"; // No rompemos la operación principal
+            }
+            
+            var product = await productRepository.FindByIdAsync(domainEvent.ProductId.ToString());
+            var warehouse = await warehouseRepository.FindByIdAsync(domainEvent.WarehouseId.ToString()); 
+            
+            if (product == null || warehouse == null)
+            {
+                Console.WriteLine("[EventHandler] Product or Warehouse missing for event " + domainEvent.GetType().Name);
+                return "EventHandler error";
+            }
+            
+            alertsAndNotificationsService.CreateAlert(
+                title: "Zero Stock Level Warning",
+                message: $"Product {product.Name} in warehouse {warehouse.Name} does not have any stock left..",
+                severity: "Critical",
+                type: "ProductOutOfStock",
+                accountId: domainEvent.AccountId,
+                inventory.Id.ToString()
+            );
+        
+            return inventory.Id.ToString();  
         }
-        else
+        catch (Exception ex)
         {
-            inventory = await inventoryRepository
-                .GetByProductIdWarehouseIdAsync(
-                    new ObjectId(domainEvent.ProductId),
-                    new ObjectId(domainEvent.WarehouseId)
-                ) ?? throw new ArgumentException("The inventory does not exist.");
+            Console.WriteLine($"Error handling event {domainEvent.GetType().Name}: {ex}");
+            return "Error"; // No interrumpe la operación principal
         }
-
-        var product = await productRepository.FindByIdAsync(domainEvent.ProductId.ToString()) 
-                      ?? throw new ArgumentException("The product does not exist.");
-        var warehouse = await warehouseRepository.FindByIdAsync(domainEvent.WarehouseId.ToString()) 
-                        ?? throw new ArgumentException("The warehouse does not exist.");
-        
-        var title = "Zero Stock Level Warning";
-        var message = $"Product {product.Name} in warehouse {warehouse.Name} does not have any stock left.";;
-        var severity = "Critical";
-        var type = "ProductOutOfStock";
-
-        alertsAndNotificationsService.CreateAlert(
-            title,
-            message,
-            severity,
-            type,
-            domainEvent.AccountId,
-            inventory.Id.ToString()
-        );
-        
-        return inventory.Id.ToString();
     }
 }
