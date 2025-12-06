@@ -56,7 +56,7 @@ public class ProductExit(
     /// <summary>
     ///     The expiration date of the product that was exited if applicable.
     /// </summary>
-    public string? ExpirationDate { get; private set; } = expirationDate ?? string.Empty;
+    public string? ExpirationDate { get; private set; } = expirationDate ?? "";
     
     /// <summary>
     ///     The ID of the warehouse from which the product was exited.

@@ -33,7 +33,7 @@ public static class TransferProductsToAnotherWarehouseCommandFromResourceAssembl
         var targetDestinationWarehouseId = new ObjectId(resource.DestinationWarehouseId);
         
         // Validates if the resource has an expiration date.
-        if (resource.ExpirationDate != null)
+        if (resource.ExpirationDate.HasValue)
         {
             // If it does, creates a new TransferProductsToAnotherWarehouseCommand with the expiration date.
             return new TransferProductsToAnotherWarehouseCommand(

@@ -154,7 +154,7 @@ public class Inventory(
                     accountId.GetId,
                     ProductId.ToString(),
                     WarehouseId.ToString(),
-                    ExpirationDate
+                    ExpirationDate ?? new ProductExpirationDate()
                 );
 
             AddDomainEvent(productProblemEvent);
