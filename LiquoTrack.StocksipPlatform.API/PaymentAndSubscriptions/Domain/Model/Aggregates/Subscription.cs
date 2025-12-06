@@ -9,11 +9,9 @@ namespace LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.A
 /// <summary>
 ///     Aggregate root representing a subscription.
 /// </summary>
-public class Subscription(
+public partial class Subscription(
     string accountId,
-    string planId,
-    ESubscriptionStatus status,
-    DateTime expirationDate
+    string planId
     ) : Entity
 {
     /// <summary>
@@ -33,11 +31,6 @@ public class Subscription(
     public ESubscriptionStatus Status { get; set; }
     
     /// <summary>
-    ///     The expiration date of the subscription.
-    /// </summary>
-    public DateTime? ExpirationDate { get; set; } = expirationDate;
-
-    /// <summary>
     ///     Method to activate a trial subscription for a given premium plan.
     /// </summary>
     /// <param name="premiumPLan">
@@ -49,6 +42,32 @@ public class Subscription(
         Status = ESubscriptionStatus.Trial;
         ExpirationDate = DateTime.UtcNow.AddDays(14);
     }
+    
+    /// <summary>
+    ///     Method to activate a free subscription for a given free plan.   
+    /// </summary>
+    /// <param name="freePlan">
+    ///     Free plan to activate the subscription for.
+    /// </param>
+    public void ActivateFreePlan(Plan freePlan)
+    {
+        PlanId = freePlan.Id.ToString();
+        Status = ESubscriptionStatus.Active;
+        ExpirationDate = CalculateExpirationDate(freePlan);
+    }
+    
+    /// <summary>
+    ///     Method to activate a premium subscription for a given premium plan.  
+    /// </summary>
+    /// <param name="premiumPlan">
+    ///     Premium plan to activate the subscription for. 
+    /// </param>
+    public void ActivatePremiumPlan(Plan premiumPlan)
+    {
+        PlanId = premiumPlan.Id.ToString();
+        Status = ESubscriptionStatus.Active;
+        ExpirationDate = CalculateExpirationDate(premiumPlan);
+    }
 
     /// <summary>
     ///     Method to activate a paid subscription for a given paid plan.
@@ -56,39 +75,11 @@ public class Subscription(
     /// <param name="paidPlan">
     ///     The paid plan to activate the subscription for.
     /// </param>
-    public void ActivatePaidPlan(Plan paidPlan)
+    public void ActivateEnterprisePlan(Plan paidPlan)
     {
         PlanId = paidPlan.Id.ToString();
         Status = ESubscriptionStatus.Active;
         ExpirationDate = CalculateExpirationDate(paidPlan);
-    }
-    
-    /// <summary>
-    ///     Method to cancel the subscription.
-    /// </summary>
-    public void CancelSubscription()
-    {
-        Status = ESubscriptionStatus.Canceled;
-        ExpirationDate = null;
-    }
-    
-    /// <summary>
-    ///     Method to mark the subscription as expired.
-    /// </summary>
-    public void MarkAsExpired()
-    {
-        Status = ESubscriptionStatus.Expired;
-    }
-
-    /// <summary>
-    ///     Method to upgrade the subscription to a new plan.
-    /// </summary>
-    /// <param name="newPlan"></param>
-    public void UpgradePlan(Plan newPlan)
-    {
-        PlanId = newPlan.Id.ToString();
-        Status = ESubscriptionStatus.Active;
-        ExpirationDate = CalculateExpirationDate(newPlan);
     }
 
     /// <summary>
@@ -107,6 +98,7 @@ public class Subscription(
     {
         return plan.PaymentFrequency switch
         {
+            EPaymentFrequency.None => DateTime.MaxValue,
             EPaymentFrequency.Monthly => DateTime.UtcNow.AddMonths(1),
             EPaymentFrequency.Yearly => DateTime.UtcNow.AddYears(1),
             _ => throw new ArgumentOutOfRangeException()

@@ -28,10 +28,16 @@ public static class AddProductsToWarehouseCommandFromResourceAssembler
     public static AddProductsToWarehouseCommand ToCommandFromResource(
         AddProductsToWarehouseResource resource, string productId, string warehouseId)
     {
+        ArgumentNullException.ThrowIfNull(resource);
+        if (!resource.ExpirationDate.HasValue)
+            throw new ArgumentNullException(nameof(resource.ExpirationDate), "ExpirationDate is required for this command.");
+
+        var dateOnly = DateOnly.FromDateTime(resource.ExpirationDate.Value);
+
         return new AddProductsToWarehouseCommand(
             new ObjectId(productId),
             new ObjectId(warehouseId),
-            new ProductExpirationDate(resource.ExpirationDate),
+            new ProductExpirationDate(dateOnly),
             resource.QuantityToAdd
         );
     }
@@ -54,6 +60,8 @@ public static class AddProductsToWarehouseCommandFromResourceAssembler
     public static AddProductsToWarehouseWithoutExpirationDateCommand ToCommandFromResourceWithoutExpirationDate(
         AddProductsToWarehouseResource resource, string productId, string warehouseId)
     {
+        ArgumentNullException.ThrowIfNull(resource);
+
         return new AddProductsToWarehouseWithoutExpirationDateCommand(
             new ObjectId(productId),
             new ObjectId(warehouseId),

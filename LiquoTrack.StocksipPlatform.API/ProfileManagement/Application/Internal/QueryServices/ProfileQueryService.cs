@@ -65,4 +65,18 @@ public class ProfileQueryService(IProfileRepository profileRepository) : IProfil
     {
         return await profileRepository.FindByFullNameAsync(query.FullName);
     }
+
+    /// <summary>
+    ///     Method to handle getting profiles by user ID.
+    /// </summary>
+    /// <param name="query">
+    ///     The query containing the user ID.
+    /// </param>
+    /// <returns>
+    ///     A collection of profiles for the specified user.
+    /// </returns>
+    public async Task<IEnumerable<Profile>> Handle(GetProfilesByUserIdQuery query)
+    {
+        return await profileRepository.FindAllByUserIdAsync(query.UserId);
+    }
 }

@@ -13,7 +13,7 @@ public record RegisterProductCommand(
         Money UnitPrice,
         ProductMinimumStock MinimumStock,
         ProductContent Content,
-        IFormFile Image,
+        IFormFile? Image,
         AccountId AccountId,
         AccountId SupplierId
     );

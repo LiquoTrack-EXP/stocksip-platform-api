@@ -2,87 +2,66 @@ using System.Net.Mime;
 using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Services;
 using LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.External.Google.Requests;
+using LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Pipeline.Middleware.Attributes;
 using LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Resources;
 using LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Transform;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Controllers
 {
-    [Authorize]
+    using LiquoTrack.StocksipPlatform.API.Authentication.Application.Internal.OutboundServices.Authentication;
+    using LiquoTrack.StocksipPlatform.API.Authentication.Application.Internal.OutboundServices.Token;
+    using Microsoft.Extensions.Logging;
+
     [ApiController]
     [Route("api/v1")]
     [Produces(MediaTypeNames.Application.Json)]
-    [SwaggerTag("Authentication endpoints")]
-    [ApiExplorerSettings(GroupName = "v1")]
+    [SwaggerTag("Authentication endpoints, including Google Sign-In.")]
     public class AuthenticationController(
-        IGoogleAuthService googleAuthService,
+        IExternalAuthService externalAuthService,
         IUserCommandService userCommandService,
-        IUserQueryService userQueryService,
-        ILogger<AuthenticationController> logger)
-        : ControllerBase
+        ITokenService tokenService,
+        ILogger<AuthenticationController> logger) : ControllerBase
     {
-        private const int DefaultPageSize = 10;
-        private const int MaxPageSize = 50;
-        private const string GoogleAuthProvider = "Google";
-        private const string LogPrefix = "[AuthenticationController]";
-
-        private readonly IGoogleAuthService _googleAuthService = googleAuthService ?? throw new ArgumentNullException(nameof(googleAuthService));
-        private readonly IUserCommandService _userCommandService = userCommandService ?? throw new ArgumentNullException(nameof(userCommandService));
-        private readonly IUserQueryService _userQueryService = userQueryService ?? throw new ArgumentNullException(nameof(userQueryService));
-        private readonly ILogger<AuthenticationController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        #region Google Authentication
-
         /// <summary>
-        /// Authenticates a user using Google's OAuth 2.0 ID token
+        /// Sign in with Google Identity Services ID token. Returns app JWT and user info.
         /// </summary>
-        /// <param name="request">Google authentication request containing ID token and client ID</param>
-        /// <returns>Authentication response with user details and JWT token</returns>
-        [HttpPost("auth/google")]
+        [HttpPost("authentication/google")] 
         [AllowAnonymous]
         [SwaggerOperation(
-            Summary = "Authenticate with Google",
-            Description = "Authenticates a user using Google's OAuth 2.0 ID token"
-        )]
-        [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(StatusCodes.Status502BadGateway)]
-        public async Task<IActionResult> AuthenticateWithGoogle([FromBody] GoogleAuthRequest request)
+            Summary = "Sign in with Google",
+            Description = "Accepts a Google ID token from GIS and returns an app JWT with user info",
+            OperationId = "GoogleSignIn")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Authenticated", typeof(AuthenticatedUserResource))]
+        [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid ID token")]
+        public async Task<IActionResult> SignInWithGoogle([FromBody] GoogleAuthRequest request)
         {
-            _logger.LogInformation($"{LogPrefix} Starting Google Authentication");
+            if (request is null || string.IsNullOrWhiteSpace(request.IdToken))
+                return BadRequest(new { Error = "IdToken is required" });
 
-            try
+            var validation = await externalAuthService.ValidateIdTokenAsync(request.IdToken);
+            if (!validation.Success || string.IsNullOrWhiteSpace(validation.Email) || string.IsNullOrWhiteSpace(validation.ProviderUserId))
             {
-                if (!ModelState.IsValid)
-                {
-                    return HandleInvalidModelState();
-                }
-
-                _logger.LogDebug($"{LogPrefix} Validating Google token for client: {request.ClientId}");
-                var (user, token, error) = await _googleAuthService.AuthenticateWithGoogleAsync(request.IdToken, request.ClientId);
-
-                if (error != null || user == null || token == null)
-                {
-                    _logger.LogWarning($"{LogPrefix} Google authentication failed: {error}");
-                    return Unauthorized(new { error = error ?? "Authentication failed" });
-                }
-
-                _logger.LogInformation($"{LogPrefix} Successfully authenticated user: {user.Email}");
-                return Ok(new { token, user });
+                logger.LogWarning("Google auth failed: {Error}", validation.Error);
+                return BadRequest(new { Error = validation.Error ?? "Invalid Google token" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"{LogPrefix} Error during Google authentication");
-                return HandleException(ex);
-            }
+
+            var user = await userCommandService.CreateOrUpdateFromExternalAsync(
+                validation.ProviderUserId!, validation.Email!, validation.Name);
+
+            var jwt = tokenService.GenerateToken(user);
+
+            var resource = new AuthenticatedUserResource(
+                jwt,
+                user.Id.ToString(),
+                user.Email.ToString(),
+                user.Username,
+                user.AccountId?.GetId ?? string.Empty
+            );
+
+            return Ok(resource);
         }
-
-        #endregion
-
         #region Authentication
 
         /// <summary>
@@ -101,20 +80,20 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Control
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SignIn([FromBody] SignInResource signInResource)
         {
-            _logger.LogInformation($"{LogPrefix} Sign in attempt for user: {signInResource.Email}");
+            logger.LogInformation("Sign in attempt for user: {Email}", signInResource.Email);
 
             try
             {
                 var signInCommand = SignInCommandFromResourceAssembler.ToCommandFromResource(signInResource);
-                var (user, token) = await _userCommandService.Handle(signInCommand);
+                var (user, token) = await userCommandService.Handle(signInCommand);
 
-                _logger.LogInformation($"{LogPrefix} Successful sign in for user: {user.Email}");
+                logger.LogInformation("Successful sign in for user: {Email}", user.Email);
                 var resource = AuthenticatedUserResourceFromEntityAssembler.ToResourceFromEntity(user, token);
                 return Ok(resource);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{LogPrefix} Sign in failed for user: {signInResource?.Email}");
+                logger.LogError(ex, "Sign in failed for user: {Email}", signInResource?.Email);
                 return Unauthorized(new
                 {
                     error = "Authentication failed",
@@ -128,8 +107,8 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Control
         /// Registers a new user
         /// </summary>
         /// <param name="signUpResource">User registration details</param>
-        [HttpPost("sign-up")]
         [AllowAnonymous]
+        [HttpPost("sign-up")]
         [SwaggerOperation(
             Summary = "Sign up",
             Description = "Register a new user"
@@ -139,99 +118,29 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Control
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SignUp([FromBody] SignUpResource signUpResource)
         {
-            _logger.LogInformation($"{LogPrefix} New user registration: {signUpResource.Email}");
+            logger.LogInformation("New user registration: {Email}", signUpResource.Email);
 
             try
             {
                 var signUpCommand = SignUpCommandFromResourceAssembler.ToCommandFromResource(signUpResource);
-                var result = await _userCommandService.Handle(signUpCommand);
+                var result = await userCommandService.Handle(signUpCommand);
 
-                _logger.LogInformation($"{LogPrefix} User registered successfully: {signUpResource.Email}");
+                logger.LogInformation("User registered successfully: {Email}", signUpResource.Email);
                 return Ok(new { message = "User registered successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{LogPrefix} Registration failed for user: {signUpResource.Email}");
+                logger.LogError(ex, "Registration failed for user: {Email}", signUpResource.Email);
                 return HandleException(ex);
             }
         }
 
         #endregion
 
-        #region Private Helpers
-
-        private void LogUserClaims()
-        {
-            if (User?.Identity?.IsAuthenticated == true)
-            {
-                _logger.LogInformation($"{LogPrefix} Authenticated user: {User.Identity.Name}");
-                _logger.LogDebug($"{LogPrefix} User claims: {string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}"))}");
-            }
-        }
-
-        private PaginatedResponse<UserListResponse> CreatePaginatedResponse(List<User> users, int page, int pageSize)
-        {
-            var totalCount = users.Count;
-            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-            var items = users
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(u => new UserListResponse
-                {
-                    Id = ParseUserId(u.Id.ToString()),
-                    Email = u.Email?.ToString() ?? string.Empty,
-                    EmailVerified = true,
-                    Provider = GoogleAuthProvider,
-                    // Add other properties as needed
-                })
-                .ToList();
-
-            return new PaginatedResponse<UserListResponse>
-            {
-                Items = items,
-                Page = page,
-                PageSize = items.Count,
-                TotalCount = totalCount,
-                TotalPages = totalPages
-            };
-        }
-
-        private static int ParseUserId(string id)
-        {
-            if (string.IsNullOrEmpty(id) || id.Length < 8)
-                return 0;
-
-            try
-            {
-                return int.Parse(id.Substring(0, 8),
-                    System.Globalization.NumberStyles.HexNumber);
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        private IActionResult HandleInvalidModelState()
-        {
-            var errors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => e.ErrorMessage)
-                .ToList();
-
-            _logger.LogWarning($"{LogPrefix} Invalid model state. Errors: {string.Join(", ", errors)}");
-
-            return BadRequest(new
-            {
-                error = "Invalid request data",
-                details = errors
-            });
-        }
-
         private IActionResult HandleException(Exception ex)
         {
             var errorId = Guid.NewGuid().ToString();
-            _logger.LogError(ex, $"{LogPrefix} Error ID: {errorId}");
+            logger.LogError(ex, "Error ID: {ErrorId}", errorId);
 
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
@@ -240,7 +149,5 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Interfaces.REST.Control
                 details = ex.Message
             });
         }
-
-        #endregion
     }
 }

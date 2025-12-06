@@ -2,7 +2,7 @@
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Services;
-using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Repositories;
+using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
 
 namespace LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Application.Internal.CommandServices;
 
@@ -12,10 +12,12 @@ namespace LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Application.In
 /// <param name="accountRepository">
 ///     The repository used to manage Account entities.
 /// </param>
-public class AccountCommandService(IAccountRepository accountRepository) : IAccountCommandService
+public class AccountCommandService(
+    IAccountRepository accountRepository,
+    IPlanRepository planRepository) : IAccountCommandService
 {
     /// <summary>
-    ///     The repository used to manage Account entities.
+    ///     Handles the creation of a new account.
     /// </summary>
     /// <param name="command">
     ///     The command containing the details for creating a new account.
@@ -28,5 +30,41 @@ public class AccountCommandService(IAccountRepository accountRepository) : IAcco
         var account = new Account(command);
         await accountRepository.AddAsync(account);
         return account;
+    }
+
+    /// <summary>
+    ///     Handles adding an address to an existing account.
+    /// </summary>
+    /// <param name="command">
+    ///     The command containing the details for adding an address to an account.
+    /// </param>
+    /// <returns>
+    ///     A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when the account is not found.
+    /// </exception>
+    public async Task Handle(AddAddressToAccountCommand command)
+    {
+        var account = await accountRepository.FindByIdAsync(command.AccountId);
+    
+        if (account == null)
+            throw new InvalidOperationException($"Account with ID {command.AccountId} not found.");
+
+        var address = new Address(
+            command.Street,
+            command.City,
+            command.State,
+            command.Country,
+            command.ZipCode
+        );
+
+        account.AddAddress(address);
+    
+        Console.WriteLine($"Updating account {command.AccountId} with {account.Addresses.Count} addresses");
+    
+        await accountRepository.UpdateAsync(account);
+    
+        Console.WriteLine("Update completed");
     }
 }

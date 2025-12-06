@@ -1,3 +1,5 @@
+using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Model.Aggregates;
+
 namespace LiquoTrack.StocksipPlatform.API.ProfileManagement.Interfaces.ACL;
 
 /// <summary>
@@ -22,4 +24,26 @@ public interface IProfileContextFacade
         string? phoneNumber,
         IFormFile? profilePicture,
         string assignedRole);
+    
+    /// <summary>
+    ///     Method to get a profile by user ID.   
+    /// </summary>
+    /// <param name="userId">
+    ///     The ID of the user to find a profile for.
+    /// </param>
+    /// <returns>
+    ///     A profile if found; otherwise, null.
+    /// </returns>
+    Task<IEnumerable<Profile?>> GetProfilesByUserId(string userId);
+    
+    /// <summary>
+    ///     Method to delete a profile by ID.  
+    /// </summary>
+    /// <param name="id">
+    ///     The ID of the profile to delete. 
+    /// </param>
+    /// <returns>
+    ///     A profile if found; otherwise, null.
+    /// </returns>
+    Task<bool?> DeleteProfileById(string id);
 }

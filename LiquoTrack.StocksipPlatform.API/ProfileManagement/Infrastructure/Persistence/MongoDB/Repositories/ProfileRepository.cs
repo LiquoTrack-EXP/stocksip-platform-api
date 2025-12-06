@@ -1,4 +1,5 @@
 using Cortex.Mediator;
+using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
@@ -109,5 +110,21 @@ public class ProfileRepository(AppDbContext context, IMediator mediator) : BaseR
             .FirstOrDefaultAsync();
 
         return imageUrlValueObject?.GetValue() ?? string.Empty;
+    }
+
+    /// <summary>
+    ///      Method to find all profiles by user ID.
+    /// </summary>
+    /// <param name="userId">
+    ///     The ID of the user to find profiles for.
+    /// </param>
+    /// <returns>
+    ///     A list of profiles for the specified user.
+    /// </returns>
+    public async Task<IEnumerable<Profile>> FindAllByUserIdAsync(string userId)
+    {
+        return await _profileCollection
+            .Find(x => x.UserId == userId)
+            .ToListAsync();
     }
 }

@@ -11,6 +11,6 @@ public record RegisterProductResource(
         string Code,
         int MinimumStock,
         decimal Content,
-        IFormFile Image,
-        string SupplierId
+        IFormFile? Image,
+        string? SupplierId = null
     );

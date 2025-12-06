@@ -18,7 +18,7 @@ public interface IProductQueryService
     ///     The list of products associated with the specified account ID.
     ///     Or an empty collection if no products are found.
     /// </returns>
-    Task<ICollection<Product>> Handle(GetAllProductsByAccountIdQuery query);
+    Task<(ICollection<Product>, int currentTotal, int? planLimit)> Handle(GetAllProductsByAccountIdQuery query);
 
     /// <summary>
     ///     Method to handle the retrieval of all products associated with a specific supplier ID.

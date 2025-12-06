@@ -31,9 +31,35 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Co
 public class WarehouseProductsController(
         IInventoryCommandService inventoryCommandService,
         IInventoryQueryService inventoryQueryService,
-        IProductQueryService productQueryService
+        IProductQueryService productQueryService,
+        IProductExitQueryService productExitQueryService
     ) : ControllerBase
 {
+    /// <summary>
+    ///     Method to try parsing the route parameters into valid object IDs.
+    /// </summary>
+    /// <returns>
+    ///     A boolean value indicating whether the route parameters could be parsed successfully.
+    /// </returns>
+    private bool TryParseObjectIds(string warehouseId, string productId, out ObjectId warehouseObjId, out ObjectId productObjId, out IActionResult? error)
+    {
+        error = null;
+        warehouseObjId = default;
+        productObjId = default;
+
+        if (!ObjectId.TryParse(warehouseId, out warehouseObjId))
+        {
+            error = BadRequest("Invalid warehouse ID.");
+            return false;
+        }
+
+        if (ObjectId.TryParse(productId, out productObjId)) return true;
+        error = BadRequest("Invalid product ID.");
+        
+        return false;
+
+    }
+    
     /// <summary>
     ///     Endpoint to handle the retrieval of an inventory by its ID.
     /// </summary>
@@ -53,27 +79,20 @@ public class WarehouseProductsController(
         [FromRoute] string productId,
         [FromQuery] DateTime? expirationDate)
     {
-        ObjectId warehouseObjId = new(warehouseId);
-        ObjectId productObjId = new(productId);
-        Inventory? inventory;
+        if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
+        if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
 
+        Inventory? inventory;
         if (expirationDate.HasValue)
         {
-            var expirationDateHas = new ProductExpirationDate(DateOnly.FromDateTime(expirationDate.Value));
-            var getInventoryByProductIdWarehouseIdAndExpirationDateQuery =
-                new GetInventoryByProductIdWarehouseIdAndExpirationDateQuery(
-                    productObjId, 
-                    warehouseObjId,
-                    expirationDateHas);
-            inventory = await inventoryQueryService.Handle(getInventoryByProductIdWarehouseIdAndExpirationDateQuery);
+            var expiration = new ProductExpirationDate(DateOnly.FromDateTime(expirationDate.Value));
+            var q = new GetInventoryByProductIdWarehouseIdAndExpirationDateQuery(productObjId, warehouseObjId, expiration);
+            inventory = await inventoryQueryService.Handle(q);
         }
         else
         {
-            var getInventoryByProductIdAndWarehouseIdQuery =
-                new GetInventoryByProductIdAndWarehouseIdQuery(
-                    productObjId, 
-                    warehouseObjId);
-            inventory = await inventoryQueryService.Handle(getInventoryByProductIdAndWarehouseIdQuery);
+            var q = new GetInventoryByProductIdAndWarehouseIdQuery(productObjId, warehouseObjId);
+            inventory = await inventoryQueryService.Handle(q);
         }
 
         if (inventory is null) return NotFound("Inventory not found.");
@@ -83,6 +102,42 @@ public class WarehouseProductsController(
         return Ok(resource);
     }
 
+    /// <summary>
+    ///     Endpoint to handle the retrieval of a product exit by its ID.
+    /// </summary>
+    /// <param name="warehouseId">
+    ///     The route parameter representing the unique identifier of the warehouse for which to retrieve the product exit.
+    /// </param>
+    /// <param name="productId">
+    ///     The route parameter representing the unique identifier of the product for which to retrieve the product exit.
+    /// </param>
+    /// <param name="expirationDate">
+    ///     The query parameter representing the expiration date of the product exit to be retrieved.
+    /// </param>
+    /// <returns></returns>
+    [HttpGet("{productId}/exits")]
+    [SwaggerOperation(
+        Summary = "Get Product Exit by Product ID and Warehouse ID",
+        Description = "Retrieves product exit details for a specific product in a specific warehouse. Optionally, filter by expiration date.",
+        OperationId = "GetProductExitByProductIdAndWarehouseId")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Product exit found!", typeof(ProductExitResource))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Product exit not found.")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid warehouse ID.")]
+    public async Task<IActionResult> GetProductExitByWarehouseIdAndProductId(
+        [FromRoute] string warehouseId,
+        [FromRoute] string productId,
+        [FromQuery] DateTime? expirationDate)
+    {
+        if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
+        if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
+        
+        var getProductExitByWarehouseIdQuery = new GetProductExitByProductIdAndWarehouseIdQuery(warehouseObjId, productObjId, expirationDate);
+        var productExit = await productExitQueryService.Handle(getProductExitByWarehouseIdQuery);
+        if (productExit is null) return NotFound("Product exit not found.");
+        var resource = ProductExitResourceFromEntityAssembler.ToResourceFromEntity(productExit);
+        return Ok(resource);
+    }
+    
     /// <summary>
     ///     Endpoint to handle the retrieval of all products in a warehouse.   
     /// </summary>
@@ -102,32 +157,25 @@ public class WarehouseProductsController(
     public async Task<IActionResult> GetAllProductsByWarehouseId([FromRoute] string warehouseId)
     {
         if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
+
         var getAllInventoriesByWarehouseIdQuery = new GetAllInventoriesByWarehouseIdQuery(warehouseObjId);
-        var inventories = await inventoryQueryService.Handle(getAllInventoriesByWarehouseIdQuery);
+        var inventories = await inventoryQueryService.Handle(getAllInventoriesByWarehouseIdQuery) ?? Enumerable.Empty<Inventory>();
         var enumerable = inventories as Inventory[] ?? inventories.ToArray();
-        var productIds = enumerable
-            .Select(i => i.ProductId)
-            .Distinct()
-            .ToList();
-        
+
+        var productIds = enumerable.Select(i => i.ProductId).Distinct().ToList();
         var products = new List<Product>();
         foreach (var productId in productIds)
         {
             var product = await productQueryService.Handle(new GetProductByIdQuery(productId));
             if (product != null) products.Add(product);
         }
-        
-        var productDict = products.ToDictionary(p => p.Id, p => p);
 
+        var productDict = products.ToDictionary(p => p.Id, p => p);
         var resources = enumerable
             .Where(inv => productDict.ContainsKey(inv.ProductId))
-            .Select(inv =>
-            {
-                var product = productDict[inv.ProductId];
-                return InventoryWithProductResourceFromEntityAssembler.ToResourceFromEntity(inv, product);
-            })
+            .Select(inv => InventoryWithProductResourceFromEntityAssembler.ToResourceFromEntity(inv, productDict[inv.ProductId]))
             .ToList();
-        
+
         return Ok(resources);
     }
 
@@ -159,24 +207,22 @@ public class WarehouseProductsController(
         [FromRoute] string productId,
         [FromBody] AddProductsToWarehouseResource resource)
     {
-        ObjectId warehouseObjId = new(warehouseId);
-        ObjectId productObjId = new(productId);
+        if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
+        if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
+
         Inventory? inventory;
-        
         if (resource.ExpirationDate.HasValue)
         {
-            var expirationDateHas = new ProductExpirationDate(resource.ExpirationDate.Value);
-            var addProductsToWarehouseCommand = new AddProductsToWarehouseCommand(
-                productObjId, warehouseObjId, expirationDateHas, resource.QuantityToAdd);
-            inventory = await inventoryCommandService.Handle(addProductsToWarehouseCommand);
+            var expiration = new ProductExpirationDate(DateOnly.FromDateTime(resource.ExpirationDate.Value));
+            var cmd = new AddProductsToWarehouseCommand(productObjId, warehouseObjId, expiration, resource.QuantityToAdd);
+            inventory = await inventoryCommandService.Handle(cmd);
         }
         else
         {
-            var addProductsToWarehouseWithoutExpirationDateCommand = new AddProductsToWarehouseWithoutExpirationDateCommand(
-                productObjId, warehouseObjId, resource.QuantityToAdd);
-            inventory = await inventoryCommandService.Handle(addProductsToWarehouseWithoutExpirationDateCommand);
+            var cmd = new AddProductsToWarehouseWithoutExpirationDateCommand(productObjId, warehouseObjId, resource.QuantityToAdd);
+            inventory = await inventoryCommandService.Handle(cmd);
         }
-        
+
         if (inventory is null) return BadRequest("Products could not be added.");
         var product = await productQueryService.Handle(new GetProductByIdQuery(productObjId));
         if (product is null) return NotFound("Product not found.");
@@ -212,27 +258,70 @@ public class WarehouseProductsController(
         [FromRoute] string productId,
         [FromBody] DecreaseProductsFromWarehouseResource resource)
     {
-        ObjectId warehouseObjId = new(warehouseId);
-        ObjectId productObjId = new(productId);
-        Inventory? inventory;
+        if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
+        if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
+
+        var exitType = Enum.Parse<EProductExitReasons>(resource.ExitType);
         
+        Inventory? inventory;
         if (resource.ExpirationDate.HasValue)
         {
-            var expirationDateHas = new ProductExpirationDate(resource.ExpirationDate.Value);
-            var decreaseProductsFromWarehouseCommand = new DecreaseProductsFromWarehouseCommand(
-                productObjId, warehouseObjId, expirationDateHas, resource.QuantityToDecrease);
-            inventory = await inventoryCommandService.Handle(decreaseProductsFromWarehouseCommand);
+            var expiration = new ProductExpirationDate(DateOnly.FromDateTime(resource.ExpirationDate.Value));
+            var cmd = new DecreaseProductsFromWarehouseCommand(productObjId, warehouseObjId, expiration, resource.QuantityToDecrease, exitType);
+            inventory = await inventoryCommandService.Handle(cmd);
         }
         else
         {
-            var decreaseProductsFromWarehouseWithoutExpirationDateCommand = new DecreaseProductsFromWarehouseWithoutExpirationDateCommand(
-                productObjId, warehouseObjId, resource.QuantityToDecrease);
-            inventory = await inventoryCommandService.Handle(decreaseProductsFromWarehouseWithoutExpirationDateCommand);
+            var cmd = new DecreaseProductsFromWarehouseWithoutExpirationDateCommand(productObjId, warehouseObjId, resource.QuantityToDecrease, exitType);
+            inventory = await inventoryCommandService.Handle(cmd);
         }
-        
+
         if (inventory is null) return BadRequest("Products could not be subtracted from the warehouse.");
         var product = await productQueryService.Handle(new GetProductByIdQuery(productObjId));
         if (product is null) return NotFound("Product not found.");
+        var resourceWithProduct = InventoryWithProductResourceFromEntityAssembler.ToResourceFromEntity(inventory, product);
+        return Ok(resourceWithProduct);
+    }
+
+    /// <summary>
+    ///     Endpoint to handle the transfer of products to another warehouse.
+    /// </summary>
+    /// <param name="warehouseId">
+    ///     The route parameter representing the unique identifier of the warehouse to which products are to be transferred.
+    /// </param>
+    /// <param name="productId">
+    ///     The route parameter representing the unique identifier of the product to be transferred.
+    /// </param>
+    /// <param name="resource">
+    ///     The request body containing the details of the products to be transferred.  
+    /// </param>
+    /// <returns>
+    ///     The updated current inventory for the product, or a 400 Bad Request response if the products could not be transferred.
+    /// </returns>
+    [HttpPost("{productId}/transfers")]
+    [SwaggerOperation(
+        Summary = "Transfer products to another warehouse",
+        Description = "Transfers products from one warehouse to another.",
+        OperationId = "TransferProductsToAnotherWarehouse")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Products transferred successfully!", typeof(InventoryWithProductResource))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Products could not be transferred...")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Product not found.")]
+    public async Task<IActionResult> TransferProductsToAnotherWarehouse(
+            [FromRoute] string warehouseId,
+            [FromRoute] string productId, 
+            [FromBody] TransferProductsToAnotherWarehouseResource resource
+        )
+    {
+        if (!ObjectId.TryParse(warehouseId, out var originWarehouseObjId)) return BadRequest("Invalid origin warehouse ID.");
+        if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
+        if (!ObjectId.TryParse(resource.DestinationWarehouseId, out var destinationWarehouseObjId)) return BadRequest("Invalid destination warehouse ID.");
+
+        var product = await productQueryService.Handle(new GetProductByIdQuery(productObjId));
+        if (product is null) return NotFound("Product not found.");
+
+        var command = TransferProductsToAnotherWarehouseCommandFromResourceAssembler.ToCommandFromResource(resource, originWarehouseObjId.ToString(), productObjId.ToString());
+        var inventory = await inventoryCommandService.Handle(command);
+        if (inventory is null) return BadRequest("Products could not be transferred.");
         var resourceWithProduct = InventoryWithProductResourceFromEntityAssembler.ToResourceFromEntity(inventory, product);
         return Ok(resourceWithProduct);
     }

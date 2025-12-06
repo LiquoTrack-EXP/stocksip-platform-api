@@ -9,6 +9,17 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
 public interface IInventoryQueryService
 {
     /// <summary>
+    ///     Method to get an inventory by its ID.
+    /// </summary>
+    /// <param name="query">
+    ///     The query object containing the inventory ID.
+    /// </param>
+    /// <returns>
+    ///     The inventory if found; otherwise, null.
+    /// </returns>
+    Task<Inventory?> Handle(GetInventoryByIdQuery query);
+    
+    /// <summary>
     ///     Method to handle the retrieval of all inventories associated with a specific product ID.
     /// </summary>
     /// <param name="query">

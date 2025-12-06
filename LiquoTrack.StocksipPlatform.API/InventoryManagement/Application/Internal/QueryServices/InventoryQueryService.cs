@@ -16,6 +16,20 @@ public class InventoryQueryService(
     ) : IInventoryQueryService
 {
     /// <summary>
+    ///     Method to get an inventory by its ID.
+    /// </summary>
+    /// <param name="query">
+    ///     The query object containing the inventory ID.
+    /// </param>
+    /// <returns>
+    ///     The inventory if found; otherwise, null.
+    /// </returns>
+    public async Task<Inventory?> Handle(GetInventoryByIdQuery query)
+    {
+        return await inventoryRepository.FindByIdAsync(query.InventoryId.ToString());
+    }
+
+    /// <summary>
     ///     Method to handle the retrieval of all inventories associated with a specific product ID.
     /// </summary>
     /// <param name="query">

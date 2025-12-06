@@ -15,28 +15,43 @@ public class Account(
     string businessId,
     EAccountStatuses status,
     EAccountRole role
-    ): Entity
+) : Entity
 {
     /// <summary>
     ///     The Business Id associated with the Account.
     /// </summary>
     public string BusinessId { get; private set; } = businessId;
-    
+
     /// <summary>
     ///     The status of the Account.
     /// </summary>
-    [BsonRepresentation(BsonType.String)]
+    [BsonRepresentation(MongoDB.Bson.BsonType.String)]
     public EAccountStatuses Status { get; private set; } = status;
-    
+
     /// <summary>
     ///     The role of the Account.
     /// </summary>
-    [BsonRepresentation(BsonType.String)]
+    [BsonRepresentation(MongoDB.Bson.BsonType.String)]
     public EAccountRole Role { get; private set; } = role;
-    
-    
-    public Subscription? Subscription { get; set; }
-    
+
+    /// <summary>
+    ///     The subscription associated with this Account.
+    ///     It can be null if the account has not yet subscribed to a plan.
+    /// </summary>
+    public Subscription? Subscription { get; private set; }
+
+    /// <summary>
+    ///     Backing field for the collection of addresses associated with the Account.
+    ///     Initialized directly to avoid null reference when MongoDB deserializes the entity.
+    /// </summary>
+    [BsonElement("addresses")]
+    private List<Address> _addresses = new();
+
+    /// <summary>
+    ///     The collection of addresses associated with the Account.
+    /// </summary>
+    public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
+
     /// <summary>
     ///     Factory method to create a new Account aggregate root from a CreateAccountCommand.
     /// </summary>
@@ -46,26 +61,23 @@ public class Account(
     /// <returns>
     ///     A new instance of the <see cref="Account"/> aggregate root.
     /// </returns>
-    public Account (CreateAccountCommand command) : this(
-        command.BusinessId,
-        EAccountStatuses.Inactive,
-        Enum.Parse<EAccountRole>(command.AccountRole)) {}
+    public Account(CreateAccountCommand command)
+        : this(
+            command.BusinessId,
+            EAccountStatuses.Inactive,
+            Enum.Parse<EAccountRole>(command.AccountRole)
+        )
+    { }
+    
+    /// <summary>
+    ///     Method to activate the account.
+    /// </summary>
+    public void ActivateAccount() => this.Status = EAccountStatuses.Active;
 
     /// <summary>
-    ///     Method to initialize the subscription of the account with a free plan.
+    ///     Method to deactivate the account.
     /// </summary>
-    /// <param name="freePlan">
-    ///     The free <see cref="Plan"/> to be assigned to the account's subscription.
-    /// </param>
-    public void InitializeSubscription(Plan freePlan)
-    {
-        Subscription = new Subscription(
-            accountId: this.Id.ToString(),
-            planId: freePlan.Id.ToString(),
-            status: ESubscriptionStatus.Active,
-            expirationDate: DateTime.MaxValue
-        );
-    }
+    public void DeactivateAccount() => this.Status = EAccountStatuses.Inactive;
 
     /// <summary>
     ///     Method to get the creation date of the account in "yyyy-MM-dd HH:mm:ss" format.
@@ -76,5 +88,17 @@ public class Account(
     public string GetCreationDate()
     {
         return this.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    /// <summary>
+    ///     Adds a new address to the account.
+    /// </summary>
+    /// <param name="address">
+    ///     The <see cref="Address"/> value object to be added to the account.
+    /// </param>
+    public void AddAddress(Address address)
+    {
+        _addresses ??= new List<Address>();
+        _addresses.Add(address);
     }
 }

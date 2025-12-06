@@ -53,6 +53,17 @@ public interface IInventoryCommandService
     Task<Inventory?> Handle(DecreaseProductsFromWarehouseWithoutExpirationDateCommand command);
 
     /// <summary>
+    ///     Method to handle the transfer of products from one warehouse to another.
+    /// </summary>
+    /// <param name="command">
+    ///     The command containing the details for transferring products from one warehouse to another.
+    /// </param>
+    /// <returns>
+    ///     The updated inventory or null if the inventory could not be updated.
+    /// </returns>
+    Task<Inventory?> Handle(TransferProductsToAnotherWarehouseCommand command);
+    
+    /// <summary>
     ///     Method to handle the deletion of an inventory.
     ///     Use this when the stock is zero and is no longer needed. 
     /// </summary>

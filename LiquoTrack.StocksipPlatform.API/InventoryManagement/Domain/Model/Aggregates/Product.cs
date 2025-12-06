@@ -53,7 +53,7 @@ public class Product(
     /// </summary>
     public ProductContent Content { get; private set; } = content;
 
-/// <summary>
+    /// <summary>
     ///     The total stock in the store. Which sums up the stock of the product in all the warehouses.
     /// </summary>
     public int TotalStockInStore { get; private set; } = 0;
@@ -76,7 +76,7 @@ public class Product(
     /// <summary>
     ///     The identifier of the supplier of the product. Can be null.
     /// </summary>
-    public AccountId SupplierId { get; private set; } = supplierId;
+    public AccountId? SupplierId { get; private set; } = supplierId;
 
     /// <summary>
     ///     Command constructor for the Product Aggregate Root.
@@ -111,6 +111,9 @@ public class Product(
         if (totalStockInStore < 0)
             throw new ArgumentException("Total stock in store cannot be negative.", nameof(totalStockInStore));
 
+        if (totalStockInStore > 0) StoreProduct();
+        if (totalStockInStore == 0) IsInWarehouse = false;
+        
         TotalStockInStore = totalStockInStore;
     }
     
@@ -125,11 +128,32 @@ public class Product(
     /// <param name="command">
     ///     The command containing the new product information. 
     /// </param>
-    public void UpdateInformation(UpdateProductInformationCommand command, string imageUrl) 
+    /// <param name="imageUrl">
+    ///     The new image url of the product.
+    /// </param>
+    public void UpdateInformation(UpdateProductInformationCommand command, string imageUrl)
     {
-        Name = command.Name;
-        UnitPrice = command.UnitPrice;
-        MinimumStock = command.MinimumStock;
-        ImageUrl = new ImageUrl(imageUrl);
-    }
+        if (command.Name is not null)
+            Name = command.Name;
+
+        if (command.UnitPrice is not null)
+            UnitPrice = command.UnitPrice;
+
+        if (command.MinimumStock is not null)
+            MinimumStock = command.MinimumStock;
+    
+        if (command.Content is not null)
+            Content = command.Content;
+        
+        if (command.Image is not null)
+            ImageUrl = new ImageUrl(imageUrl);
+    }   
+    
+    /// <summary>
+    ///     Getter method for the total stock in store.
+    /// </summary>
+    /// <returns>
+    ///     The total stock in store of the product.
+    /// </returns>
+    public int GetStockInStorage() => TotalStockInStore;
 }

@@ -59,7 +59,7 @@ public record PlanLimits
     {
         EPlanType.Free => new PlanLimits(10, 5, 500),
         EPlanType.Premium => new PlanLimits(100, 20, 2000),
-        EPlanType.Enterprise => new PlanLimits(int.MaxValue, int.MaxValue, int.MaxValue),
+        EPlanType.Enterprise => new PlanLimits(200, 40, 20000),
         _ => throw new ArgumentOutOfRangeException(nameof(planType), $"Unsupported plan type: {planType}")
     };
 }

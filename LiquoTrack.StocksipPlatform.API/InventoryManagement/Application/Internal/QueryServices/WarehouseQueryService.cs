@@ -2,6 +2,7 @@
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Interfaces.ACL.Services;
 
 namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Internal.QueryServices;
 
@@ -12,7 +13,8 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Intern
 ///     The repository for handling the Warehouses in the database.
 /// </param>
 public class WarehouseQueryService(
-        IWarehouseRepository warehouseRepository
+        IWarehouseRepository warehouseRepository,
+        IPaymentAndSubscriptionsFacade paymentAndSubscriptionsFacade
     ) : IWarehouseQueryService
 {
     /// <summary>
@@ -38,22 +40,12 @@ public class WarehouseQueryService(
     /// <returns>
     ///     A collection of warehouses associated with the account ID. Or an empty collection if none are found.
     /// </returns>
-    public async Task<ICollection<Warehouse>> Handle(GetAllWarehousesByAccountId query)
+    public async Task<(ICollection<Warehouse>, int currentTotal, int? planLimit)> Handle(GetAllWarehousesByAccountId query)
     {
-        return await warehouseRepository.FindByAccountIdAsync(query.AccountId);
-    }
-
-    /// <summary>
-    ///     Method to get the count of warehouses associated with a specific account ID.
-    /// </summary>
-    /// <param name="query">
-    ///     The query object containing the account ID.
-    /// </param>
-    /// <returns>
-    ///     The count of warehouses associated with the account ID. Or null if none are found.
-    /// </returns>
-    public async Task<int> Handle(GetWarehousesCountByAccountIdQuery query)
-    {
-        return await warehouseRepository.CountByAccountIdAsync(query.AccountId);
+        var warehouses = await warehouseRepository.FindByAccountIdAsync(query.AccountId);
+        var currentTotal = await warehouseRepository.CountByAccountIdAsync(query.AccountId);
+        var warehouseLimit =
+            await paymentAndSubscriptionsFacade.GetPlanWarehouseLimitByAccountId(query.AccountId.GetId);
+        return (warehouses, currentTotal, warehouseLimit);
     }
 }

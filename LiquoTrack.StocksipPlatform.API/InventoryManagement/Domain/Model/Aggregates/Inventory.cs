@@ -14,7 +14,7 @@ public class Inventory(
         ObjectId productId,
         ObjectId warehouseId,
         ProductStock quantity,
-        ProductExpirationDate? expirationDate = null
+        ProductExpirationDate? expirationDate
     ) : Entity
 {
     /// <summary>
@@ -41,7 +41,7 @@ public class Inventory(
     ///     The expiration date of the product.
     /// </summary>
     [BsonIgnoreIfNull]
-    public ProductExpirationDate? ExpirationDate { get; private set; }
+    public ProductExpirationDate? ExpirationDate { get; private set; } = expirationDate;
     
     /// <summary>
     ///     Marks the product as out of stock.
@@ -96,6 +96,8 @@ public class Inventory(
         // Set the product state to with stock
         CurrentState = EProductStates.WithStock;
     }
+    
+    
 
     /// <summary>
     ///     Adds stock to the product in the inventory.
@@ -178,4 +180,12 @@ public class Inventory(
         // Decrease the stock of the product
         Quantity = Quantity.DecreaseStock(removedStock);
     }
+    
+    /// <summary>
+    ///     Getter method for the total stock in the inventory.
+    /// </summary>
+    /// <returns>
+    ///     The total stock in the inventory.
+    /// </returns>
+    public int GetStock() => Quantity.GetValue;
 }

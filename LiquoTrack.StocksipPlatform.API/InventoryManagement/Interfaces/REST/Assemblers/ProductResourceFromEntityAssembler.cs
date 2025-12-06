@@ -1,4 +1,5 @@
 ﻿using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Resources;
 
 namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Assemblers;
@@ -28,6 +29,7 @@ public static class ProductResourceFromEntityAssembler
                 entity.UnitPrice.GetCurrencyCode(),
                 entity.MinimumStock.GetValue(),
                 entity.TotalStockInStore,
+                entity.Content.GetValue(),
                 entity.ImageUrl.GetValue(),
                 entity.AccountId.GetId,
                 entity.SupplierId.GetId,

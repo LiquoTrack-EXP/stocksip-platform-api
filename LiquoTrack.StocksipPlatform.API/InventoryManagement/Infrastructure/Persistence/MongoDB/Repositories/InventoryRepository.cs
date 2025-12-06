@@ -35,16 +35,21 @@ public class InventoryRepository(AppDbContext context, IMediator mediator)
     /// <returns>
     ///     An inventory item if found; otherwise, null.
     /// </returns>
-    public async Task<Inventory?> GetByProductIdWarehouseIdAndExpirationDateAsync(ObjectId productId, ObjectId warehouseId,
-        ProductExpirationDate expirationDate)
+    public async Task<Inventory?> GetByProductIdWarehouseIdAndExpirationDateAsync(
+        ObjectId productId, ObjectId warehouseId, ProductExpirationDate expirationDate)
     {
-        return await _inventoryCollection
-            .Find(x => x.ProductId == productId 
-                       && x.WarehouseId == warehouseId
-                       && x.ExpirationDate != null
-                       && x.ExpirationDate.GetValue() == expirationDate.GetValue())
-            .FirstOrDefaultAsync();
+        var expirationDateValue = expirationDate.GetValue();
+
+        var filter = Builders<Inventory>.Filter.And(
+            Builders<Inventory>.Filter.Eq(x => x.ProductId, productId),
+            Builders<Inventory>.Filter.Eq(x => x.WarehouseId, warehouseId),
+            Builders<Inventory>.Filter.Eq("ExpirationDate.Value", expirationDateValue)
+        );
+
+        return await _inventoryCollection.Find(filter).FirstOrDefaultAsync();
     }
+
+
 
     /// <summary>
     ///     Method to get an inventory item by product ID and warehouse ID.

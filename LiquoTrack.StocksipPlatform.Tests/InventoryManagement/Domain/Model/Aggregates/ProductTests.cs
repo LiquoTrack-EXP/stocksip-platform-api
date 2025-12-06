@@ -84,4 +84,38 @@ public class ProductTests
 
         Assert.Equal(types, product.Type);
     }
+
+    /// <summary>
+    ///     Method to test the inventory behavior of the Product Aggregate Root.
+    /// </summary>
+    [Fact]
+    public void InventoryTest_ShouldUpdateTotalStockAndWarehouseFlag()
+    {
+        // Arrange
+        const string name = "Whisky Blue Label";
+        const decimal price = 10.99m;
+        var brand = EBrandNames.JhonnyWalker.GetDisplayName();
+        const int minimumStock = 5;
+        const decimal content = 300.00m;
+        const string imageUrl = "https://www.example.com/image.jpg";
+        const string ownerId = "1234567890";
+        const string supplierId = "1234555";
+        const int expectedStock = 15;
+
+        var unitPrice = new Money(price, new Currency(EValidCurrencyCodes.PEN.GetDisplayName()));
+        var productMinimumStock = new ProductMinimumStock(minimumStock);
+        var productContent = new ProductContent(content);
+        var imageUrlObject = new ImageUrl(imageUrl);
+        var accountId = new AccountId(ownerId);
+        var supplierIdObject = new AccountId(supplierId);
+        var product = new Product(name, EProductTypes.Whiskeys, brand, unitPrice, productMinimumStock, productContent, imageUrlObject, accountId, supplierIdObject);
+
+        // Act
+        product.UpdateTotalStockInStore(expectedStock);
+        product.StoreProduct();
+
+        // Assert
+        Assert.Equal(expectedStock, product.TotalStockInStore);
+        Assert.True(product.IsInWarehouse);
+    }
 }

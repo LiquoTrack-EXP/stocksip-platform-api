@@ -1,4 +1,5 @@
 ﻿using System.Net.Mime;
+using LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Pipeline.Middleware.Attributes;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Entities;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Services;
@@ -28,6 +29,7 @@ public class PlansController(IPlanQueryService planQueryService) : ControllerBas
     /// <returns>
     ///     The list of all available plans.
     /// </returns>
+    [AllowAnonymous]
     [HttpGet]
     [SwaggerOperation(
         Summary = "Get all plans",

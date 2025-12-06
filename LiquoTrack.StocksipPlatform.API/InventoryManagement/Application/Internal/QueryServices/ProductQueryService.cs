@@ -2,6 +2,7 @@
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Interfaces.ACL.Services;
 
 namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Internal.QueryServices;
 
@@ -12,7 +13,8 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Intern
 ///     The repository for handling the Products in the database.
 /// </param>
 public class ProductQueryService(
-        IProductRepository productRepository
+        IProductRepository productRepository,
+        IPaymentAndSubscriptionsFacade paymentAndSubscriptionsFacade
     ) : IProductQueryService
 {
     /// <summary>
@@ -24,10 +26,14 @@ public class ProductQueryService(
     /// <returns>
     ///     The list of products associated with the specified account ID.
     ///     Or an empty collection if no products are found.
+    ///     Also returns the current total number of products and the plan limit for the account.
     /// </returns>
-    public async Task<ICollection<Product>> Handle(GetAllProductsByAccountIdQuery query)
+    public async Task<(ICollection<Product>, int currentTotal, int? planLimit)> Handle(GetAllProductsByAccountIdQuery query)
     {
-        return await productRepository.FindByAccountIdAsync(query.AccountId);   
+        var products = await productRepository.FindByAccountIdAsync(query.AccountId);
+        var currentTotal = await productRepository.CountByAccountIdAsync(query.AccountId);
+        var productLimit = await paymentAndSubscriptionsFacade.GetPlanProductsLimitByAccountId(query.AccountId.GetId);
+        return (products, currentTotal, productLimit);
     }
 
     /// <summary>

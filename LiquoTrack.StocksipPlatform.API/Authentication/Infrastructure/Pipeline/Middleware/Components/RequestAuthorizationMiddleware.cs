@@ -6,17 +6,23 @@ using Microsoft.AspNetCore.Authorization;
 using CustomAllowAnonymousAttribute = LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Pipeline.Middleware.Attributes.AllowAnonymousAttribute;
 namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Pipeline.Middleware.Components;
 
-/// <summary>
-/// RequestAuthorizationMiddleware is custom middleware.
-/// This middleware is used to authorize requests.
-/// It validates a token is included in the request header and that the token is valid.
-/// If the token is valid, then it sets the user in HttpContext.Items["User"].
-/// </summary>
+/**
+ * RequestAuthorizationMiddleware is a custom middleware.
+ * This middleware is used to authorize requests.
+ * It validates a token is included in the request header and that the token is valid.
+ * If the token is valid then it sets the user in HttpContext.Items["User"].
+ */
 public class RequestAuthorizationMiddleware(RequestDelegate next,
     ILogger<RequestAuthorizationMiddleware> logger)
 {
     private readonly ILogger<RequestAuthorizationMiddleware> _logger = logger;
 
+     /**
+     * InvokeAsync is called by the ASP.NET Core runtime.
+     * It is used to authorize requests.
+     * It validates a token is included in the request header and that the token is valid.
+     * If the token is valid then it sets the user in HttpContext.Items["User"].
+     */
     public async Task InvokeAsync(
         HttpContext     context,
         IUserQueryService userQueryService,
@@ -40,7 +46,9 @@ public class RequestAuthorizationMiddleware(RequestDelegate next,
         }
 
         var endpoint  = context.GetEndpoint();
-        var allowAnon = endpoint?.Metadata.Any(m => m is Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute) ?? false;
+        var hasCustomAllowAnon = endpoint?.Metadata.Any(m => m is CustomAllowAnonymousAttribute) ?? false;
+        var hasBuiltInAllowAnon = endpoint?.Metadata.Any(m => m is IAllowAnonymous || m is Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute) ?? false;
+        var allowAnon = hasCustomAllowAnon || hasBuiltInAllowAnon;
 
         _logger.LogInformation("Allow Anonymous = {AllowAnonymous}", allowAnon);
         if (allowAnon)
@@ -74,7 +82,8 @@ public class RequestAuthorizationMiddleware(RequestDelegate next,
         var user = await userQueryService.Handle(new GetUserByIdQuery(userId));
         _logger.LogInformation("Successful authorization. Setting HttpContext.Items[\"User\"]");
         context.Items["User"] = user;
-
+        _logger.LogInformation("Continuing with Middleware Pipeline");
+        // call next middleware
         await next(context);
     }
 }

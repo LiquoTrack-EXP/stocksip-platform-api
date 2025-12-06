@@ -5,6 +5,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.Authentication.Application.Internal.OutboundServices.Token;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Queries;
 
 namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Tokens.JWT.Services
 {
@@ -16,13 +18,15 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Tokens.J
         private readonly string _secret;
         private readonly string _issuer;
         private readonly string _audience;
+        private readonly IAccountQueryService _accountQueryService;
 
-        public TokenService(IConfiguration configuration)
+        public TokenService(IConfiguration configuration, IAccountQueryService accountQueryService)
         {
             var jwtSection = configuration.GetSection("Jwt");
             _secret = jwtSection["Secret"] ?? throw new ArgumentNullException("JWT Secret is not configured");
             _issuer = jwtSection["Issuer"] ?? "LiquoTrack.API";
             _audience = jwtSection["Audience"] ?? "LiquoTrack.Clients";
+            _accountQueryService = accountQueryService;
 
             if (string.IsNullOrEmpty(_secret))
             {
@@ -39,6 +43,26 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Tokens.J
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_secret);
+            var roleValue = "User";
+
+            try
+            {
+                var accountId = user.AccountId?.GetId;
+                if (!string.IsNullOrWhiteSpace(accountId))
+                {
+                    var account = _accountQueryService
+                        .Handle(new GetAccountByIdQuery(accountId))
+                        .GetAwaiter().GetResult();
+                    if (account != null)
+                    {
+                        roleValue = account.Role.ToString();
+                    }
+                }
+            }
+            catch
+            {
+                roleValue = "User";
+            }
             
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -48,7 +72,7 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Tokens.J
                     new Claim(ClaimTypes.Name, user.Username ?? string.Empty),
                     new Claim(ClaimTypes.Email, user.Email?.ToString() ?? string.Empty),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(ClaimTypes.Role, "User")
+                    new Claim(ClaimTypes.Role, roleValue)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 Issuer = _issuer,

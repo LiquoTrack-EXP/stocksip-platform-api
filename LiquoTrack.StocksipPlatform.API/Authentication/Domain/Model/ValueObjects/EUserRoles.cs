@@ -6,6 +6,8 @@
 /// </summary>
 public enum EUserRoles
 {
+    All,
+    SuperAdmin,
     Admin,
     Employee,
 }

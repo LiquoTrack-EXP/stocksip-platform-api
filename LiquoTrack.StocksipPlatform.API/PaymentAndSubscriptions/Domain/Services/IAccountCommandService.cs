@@ -19,4 +19,15 @@ public interface IAccountCommandService
     ///     Or null if the account could not be created.
     /// </returns>
     Task<Account?> Handle(CreateAccountCommand command);
+
+    /// <summary>
+    ///     Method to handle adding an address to an existing account.
+    /// </summary>
+    /// <param name="command">
+    ///     The command containing the details for adding an address to an account.
+    /// </param>
+    /// <returns>
+    ///     A task representing the asynchronous operation.
+    /// </returns>
+    Task Handle(AddAddressToAccountCommand command);
 }

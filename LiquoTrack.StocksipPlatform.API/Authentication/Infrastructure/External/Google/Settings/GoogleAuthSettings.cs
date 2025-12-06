@@ -7,12 +7,12 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.External
 public class GoogleAuthSettings
 {
     /// <summary>
-    /// The Google client ID.
+    /// Primary client ID used for audience validation (typically the Web/Backend client ID).
     /// </summary>
-    public string ClientId { get; set; } = string.Empty;
+    public string? ClientId { get; set; }
 
     /// <summary>
-    /// The Google client secret.
+    /// Additional audiences allowed (e.g., Android OAuth client IDs, iOS, etc.).
     /// </summary>
-    public string ClientSecret { get; set; } = string.Empty;
+    public List<string> AdditionalAudiences { get; set; } = new();
 }

@@ -7,6 +7,7 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.Pipeline
 /// <summary>
 /// This attribute is used to authorize access to a controller or action method.
 /// </summary>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public class AuthorizeAttribute: Attribute, IAuthorizationFilter
 {
     /// <summary>

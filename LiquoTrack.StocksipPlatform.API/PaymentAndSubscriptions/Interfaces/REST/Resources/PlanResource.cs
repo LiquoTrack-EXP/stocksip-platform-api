@@ -5,6 +5,7 @@ namespace LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Interfaces.RES
 ///     It is used for transferring data between the API and the client.
 /// </summary>
 public record PlanResource(
+        string PlanId,
         string PlanType,
         string Description,
         string PaymentFrequency,

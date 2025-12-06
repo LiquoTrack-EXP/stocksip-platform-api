@@ -20,6 +20,7 @@ public class PlanResourceFromEntityAssembler
     public static PlanResource ToResourceFromEntity(Plan entity)
     {
         return new PlanResource(
+            entity.Id.ToString(),
             entity.PlanType.ToString(),
             entity.Description,
             entity.PaymentFrequency.ToString(),

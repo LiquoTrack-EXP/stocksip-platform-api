@@ -7,5 +7,5 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Re
 /// </summary>
 public record AddProductsToWarehouseResource(
     int QuantityToAdd,
-    DateOnly? ExpirationDate
+    DateTime? ExpirationDate
 );

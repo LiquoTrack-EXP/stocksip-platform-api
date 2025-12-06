@@ -17,7 +17,18 @@ public interface ISubscriptionsCommandService
     /// <returns>
     ///     A task that represents the asynchronous operation. The task result contains the activated subscription.
     /// </returns>
-    Task<Subscription?> Handle(ActivatePaidCommand command);
+    Task<(string?, string?)> Handle(InitialSubscriptionCommand command);
+
+    /// <summary>
+    ///     Method to handle webhook payment notifications.
+    /// </summary>
+    /// <param name="command">
+    ///     The command containing the details for handling a webhook payment notification.
+    /// </param>
+    /// <returns>
+    ///     A task that represents the asynchronous operation. The task result contains the updated subscription.
+    /// </returns>
+    Task<Subscription?> Handle(WebhookPaymentCommand command);
     
     /// <summary>
     ///     Method to handle the upgrade of a subscription.
@@ -28,38 +39,5 @@ public interface ISubscriptionsCommandService
     /// <returns>
     ///     A task that represents the asynchronous operation. The task result contains the upgraded subscription.
     /// </returns>
-    Task<Subscription?> Handle(UpgradeSubscriptionCommand command);
-    
-    /// <summary>
-    ///     Method to handle the activation of a trial subscription.
-    /// </summary>
-    /// <param name="command">
-    ///     The command containing the details for activating a trial subscription.
-    /// </param>
-    /// <returns>
-    ///      A task that represents the asynchronous operation. The task result contains the activated trial subscription.
-    /// </returns>
-    Task<Subscription?> Handle(ActivateTrialCommand command);
-    
-    /// <summary>
-    ///     Method to handle the cancellation of a subscription.
-    /// </summary>
-    /// <param name="command">
-    ///     The command containing the details for canceling a subscription.
-    /// </param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains the canceled subscription.
-    /// </returns>
-    Task<Subscription?> Handle(CancelSubscriptionCommand command);
-    
-    /// <summary>
-    ///     Method to handle the expiration of a subscription.
-    /// </summary>
-    /// <param name="command">
-    ///     The command containing the details for expiring a subscription.
-    /// </param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains the expired subscription.
-    /// </returns>
-    Task<Subscription?> Handle(ExpireSubscriptionCommand command);
+    Task<(string?, string?)> Handle(UpgradeSubscriptionCommand command);
 }

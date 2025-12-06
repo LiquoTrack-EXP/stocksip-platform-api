@@ -4,6 +4,7 @@ using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Exceptions;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Interfaces.ACL.Services;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
 
 namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Internal.CommandServices;
@@ -16,7 +17,8 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Intern
 /// </param>
 public class WarehouseCommandService(
         IWarehouseRepository warehouseRepository,
-        IInventoryImageService inventoryImageService
+        IInventoryImageService inventoryImageService,
+        IPaymentAndSubscriptionsFacade paymentAndSubscriptionsFacade
     ) : IWarehouseCommandService
 {
     /// <summary>
@@ -31,11 +33,19 @@ public class WarehouseCommandService(
     public async Task<Warehouse?> Handle(RegisterWarehouseCommand command)
     {
         // Verifies that the warehouse does not already exist with the same name.
-        if (await warehouseRepository.ExistByNameIgnoreCaseAndAccountIdAsync(command.Name, command.AccountId))
-        {
+        if (await warehouseRepository.ExistByNameIgnoreCaseAndAccountIdAsync(command.Name, command.AccountId)) 
             throw new WarehouseFailedCreationException($"Warehouse with name {command.Name} already exists.");
-        }
         
+        // Verifies that the account has not reached the maximum number of warehouses.
+        var currentWarehousesCount = await warehouseRepository.CountByAccountIdAsync(command.AccountId);
+        
+        var maxAllowedWarehouses = await paymentAndSubscriptionsFacade
+            .GetPlanWarehouseLimitByAccountId(command.AccountId.GetId);
+        
+        if (maxAllowedWarehouses is not null && currentWarehousesCount >= maxAllowedWarehouses)
+            throw new WarehouseFailedCreationException("The account has reached the maximum number of warehouses for the current plan.");
+        
+        // Gets the image url of the warehouse.
         string imageUrl = command.Image != null ? 
             inventoryImageService.UploadImage(command.Image) 
             : "https://res.cloudinary.com/deuy1pr9e/image/upload/v1759709826/Default-warehouse_qdgvkw.jpg"; 
@@ -50,17 +60,6 @@ public class WarehouseCommandService(
                 $"{command.Address.PostalCode} " +
                 $"already exists.");
         }
-        
-        // Get the maximum number of warehouses for the account.
-        // var maxWarehouses = await paymentAndSubscriptionFacade.GetLimitsByAccountIdAsync(command.AccountId);
-        
-        // Calculate the current number of warehouses for the account.
-        var currentWarehouseCount = await warehouseRepository.CountByAccountIdAsync(command.AccountId);
-        
-        // if (currentWarehouseCount >= maxWarehouses)
-        //    throw new WarehouseFailedCreationException($"The account has reached the maximum number of warehouses ({maxWarehouses}) for the current plan.");
-        
-        // string imageUrl = command.ImageUrl != null ? cloudinaryService.UploadImage(command.Image) : "https://res.cloudinary.com/deuy1pr9e/image/upload/v1750914969/default-warehouse_whqolq.avif";
         
         // Create the warehouse.
         var warehouse = new Warehouse(command, imageUrl);

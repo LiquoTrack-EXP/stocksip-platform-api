@@ -1,98 +1,65 @@
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
+using Google.Apis.Auth;
+using LiquoTrack.StocksipPlatform.API.Authentication.Application.Internal.OutboundServices.Authentication;
+using LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.External.Google.Responses;
+using LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.External.Google.Settings;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LiquoTrack.StocksipPlatform.API.Authentication.Infrastructure.External.Google
 {
     /// <summary>
-    /// Custom Google token validator
+    /// Validates Google Identity Services ID tokens using Google.Apis.Auth.
     /// </summary>
-    /// <remarks>
-    /// This class is used to validate the Google token.
-    /// </remarks>
-    public class CustomGoogleTokenValidator : ISecurityTokenValidator
+    public class GoogleTokenValidator : IExternalAuthService
     {
-        private readonly JwtSecurityTokenHandler _tokenHandler;
+        private readonly ILogger<GoogleTokenValidator> _logger;
+        private readonly GoogleAuthSettings _settings;
 
-        public bool CanValidateToken => true;
-        public int MaximumTokenSizeInBytes { get; set; } = TokenValidationParameters.DefaultMaximumTokenSizeInBytes;
-        public bool CanReadToken(string securityToken) => true;
-
-        public CustomGoogleTokenValidator()
+        public GoogleTokenValidator(ILogger<GoogleTokenValidator> logger, IOptions<GoogleAuthSettings> options)
         {
-            _tokenHandler = new JwtSecurityTokenHandler();
+            _logger = logger;
+            _settings = options.Value;
         }
 
-        /// <summary>
-        /// Validates the token.
-        /// </summary>
-        /// <param name="securityToken">The token to validate.</param>
-        /// <param name="validationParameters">The validation parameters.</param>
-        /// <param name="validatedToken">The validated token.</param>
-        /// <returns>The claims principal.</returns>
-        public ClaimsPrincipal ValidateToken(string securityToken, TokenValidationParameters validationParameters, out SecurityToken validatedToken)
+        public async Task<ExternalAuthResult> ValidateIdTokenAsync(string idToken)
         {
-            validatedToken = null;
-
-            if (string.IsNullOrWhiteSpace(securityToken))
-            {
-                throw new ArgumentNullException(nameof(securityToken));
-            }
-
-            ArgumentNullException.ThrowIfNull(validationParameters);
+            if (string.IsNullOrWhiteSpace(idToken))
+                return new ExternalAuthResult { Success = false, Error = "ID token is required" };
 
             try
             {
-                var jwt = _tokenHandler.ReadJwtToken(securityToken);
+                var audiences = new List<string>();
+                if (!string.IsNullOrWhiteSpace(_settings.ClientId)) audiences.Add(_settings.ClientId);
+                if (_settings.AdditionalAudiences is { Count: > 0 }) audiences.AddRange(_settings.AdditionalAudiences);
 
-                var validationParametersClone = validationParameters.Clone();
-                
-                validationParametersClone.ValidateIssuerSigningKey = false;
-                validationParametersClone.RequireSignedTokens = false;
-
-                JwtSecurityToken validatedJwt = null;
-                validationParametersClone.SignatureValidator = (token, parameters) =>
+                var validationSettings = new GoogleJsonWebSignature.ValidationSettings
                 {
-                    validatedJwt = new JwtSecurityToken(token);
-                    return validatedJwt;
+                    Audience = audiences.Count > 0 ? audiences : null
                 };
 
-                var principal = _tokenHandler.ValidateToken(securityToken, validationParametersClone, out var validatedTokenOut);
-                validatedToken = validatedJwt ?? validatedTokenOut;
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, validationSettings);
 
-                var claims = new List<Claim>();
-                foreach (var claim in jwt.Claims)
+                return new ExternalAuthResult
                 {
-                    string value = claim.Value;
-                    
-
-                    if ((claim.Type == "sub" || claim.Type == "email" || claim.Type == "name") && 
-                        value.StartsWith("[") && value.EndsWith("]"))
-                    {
-                        value = value.Trim('[', ']')
-                                   .Split(',')
-                                   .FirstOrDefault()
-                                   ?.Trim('\"', ' ', '\'') 
-                                   ?? value;
-                    }
-
-                    claims.Add(new Claim(claim.Type, value, claim.ValueType, claim.Issuer, claim.OriginalIssuer));
-                }
-
-                var identity = new ClaimsIdentity(
-                    claims,
-                    "Google",
-                    ClaimsIdentity.DefaultNameClaimType,
-                    ClaimsIdentity.DefaultRoleClaimType);
-
-                validatedToken = validatedJwt ?? validatedTokenOut;
-                
-                return new ClaimsPrincipal(identity);
+                    Success = true,
+                    Email = payload.Email,
+                    ProviderUserId = payload.Subject,
+                    Name = string.IsNullOrWhiteSpace(payload.Name) ? payload.Email : payload.Name
+                };
+            }
+            catch (InvalidJwtException ex)
+            {
+                _logger.LogWarning(ex, "Invalid Google ID token");
+                return new ExternalAuthResult { Success = false, Error = "Invalid Google ID token" };
             }
             catch (Exception ex)
             {
-                validatedToken = null;
-                throw new SecurityTokenValidationException("Invalid token", ex);
+                _logger.LogError(ex, "Error validating Google ID token");
+                return new ExternalAuthResult { Success = false, Error = "Token validation error" };
             }
         }
     }

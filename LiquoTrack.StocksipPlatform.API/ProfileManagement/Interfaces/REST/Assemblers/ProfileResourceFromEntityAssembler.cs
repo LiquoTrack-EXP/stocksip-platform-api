@@ -19,7 +19,7 @@ public static class ProfileResourceFromEntityAssembler
             profile.FullName ?? string.Empty,
             profile.PersonContactNumber.PhoneNumber ?? string.Empty,
             profile.ContactNumber ?? string.Empty,
-            profile.ProfilePictureUrl.GetValue(),
+            profile.ProfilePictureUrl?.GetValue(),
             profile.UserId,
             profile.AssignedRole.ToString()
         );

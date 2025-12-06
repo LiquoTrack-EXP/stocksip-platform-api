@@ -16,10 +16,13 @@ public static class RegisterProductCommandFromResourceAssembler
     /// <param name="resource">
     ///     The RegisterProductResource to convert.
     /// </param>
+    /// <param name="accountId">
+    ///     The account id of the user registering the product.
+    /// </param>
     /// <returns>
     ///     A RegisterProductCommand representation of the RegisterProductResource.
     /// </returns>
-    public static RegisterProductCommand ToCommandFromResource(RegisterProductResource resource, string AccountId)
+    public static RegisterProductCommand ToCommandFromResource(RegisterProductResource resource, string accountId)
     {
         return new RegisterProductCommand(
                 resource.Name,
@@ -29,8 +32,8 @@ public static class RegisterProductCommandFromResourceAssembler
                 new ProductMinimumStock(resource.MinimumStock),
                 new ProductContent(resource.Content),
                 resource.Image,
-                new AccountId(AccountId),
-                new AccountId(resource.SupplierId)
+                new AccountId(accountId),
+                new AccountId(resource.SupplierId ?? "")
             );
     }
 }

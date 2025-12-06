@@ -3,6 +3,7 @@ using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Services;
 using LiquoTrack.StocksipPlatform.API.ProfileManagement.Interfaces.REST.Assemblers;
 using LiquoTrack.StocksipPlatform.API.ProfileManagement.Interfaces.REST.Resources;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace LiquoTrack.StocksipPlatform.API.ProfileManagement.Interfaces.REST.Controllers;
 
@@ -35,6 +36,43 @@ public class ProfilesController : ControllerBase
     }
 
     /// <summary>
+    ///     Method to get the profile of the currently authenticated user.
+    /// </summary>
+    /// <returns>
+    ///     A <see cref="ProfileResource"/> containing the profile information.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    ///     An argument exception is thrown if the user ID is null or whitespace.
+    /// </exception>
+    [HttpGet("me")]
+    [SwaggerOperation(
+        Summary = "Get My Profile",
+        Description = "Retrieves the profile of the currently authenticated user.",
+        OperationId = "GetMyProfile")]
+    [ProducesResponseType(typeof(ProfileResource), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMyProfile()
+    {
+        var user = HttpContext.Items["User"];
+        if (user is null) return Unauthorized("User not authenticated or invalid token.");
+        
+        
+        var userIdProperty = user.GetType().GetProperty("Id") ?? user.GetType().GetProperty("UserId");
+        var userId = userIdProperty?.GetValue(user)?.ToString();
+
+        if (string.IsNullOrEmpty(userId)) throw new ArgumentException("User ID cannot be null or whitespace.", nameof(userId));
+
+        var query = new GetProfileByUserIdQuery(userId);
+
+        var profile = await _profileQueryService.Handle(query);
+        if (profile is null) return NotFound($"Profile for user ID {userId} not found.");
+
+        var resource = ProfileResourceFromEntityAssembler.ToResourceFromEntity(profile);
+
+        return Ok(resource);
+    }
+
+    /// <summary>
     /// Creates a new profile.
     /// </summary>
     /// <param name="resource">The profile creation data.</param>
@@ -43,6 +81,9 @@ public class ProfilesController : ControllerBase
     /// <response code="400">If the request is invalid.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpPost]
+    [SwaggerOperation(
+        summary: "Create Profile",
+        description: "Creates a new profile for the currently authenticated user.")]
     [ProducesResponseType(typeof(ProfileResource), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -93,6 +134,9 @@ public class ProfilesController : ControllerBase
     /// <response code="200">Returns the profile.</response>
     /// <response code="404">If the profile is not found.</response>
     [HttpGet("{id}")]
+    [SwaggerOperation(
+        summary: "Get Profile By ID",
+        description: "Retrieves a profile by its ID.")]
     [ProducesResponseType(typeof(ProfileResource), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProfileById(string id)
@@ -128,6 +172,10 @@ public class ProfilesController : ControllerBase
     /// <response code="200">Returns the profile.</response>
     /// <response code="404">If the profile is not found.</response>
     [HttpGet]
+    [SwaggerOperation(
+        summary: "Get All profiles by User ID",
+        description: "Retrieves all profiles."
+        )]
     [ProducesResponseType(typeof(ProfileResource), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProfileByUserId([FromQuery] string userId)
@@ -165,6 +213,9 @@ public class ProfilesController : ControllerBase
     /// <response code="400">If the request is invalid.</response>
     /// <response code="404">If the profile is not found.</response>
     [HttpPut("{id}")]
+    [SwaggerOperation(
+        summary: "Update Profile",
+        description: "Updates a profile's information.")]
     [ProducesResponseType(typeof(ProfileResource), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -206,6 +257,9 @@ public class ProfilesController : ControllerBase
     /// <response code="204">If the profile was deleted successfully.</response>
     /// <response code="404">If the profile is not found.</response>
     [HttpDelete("{id}")]
+    [SwaggerOperation(
+        summary: "Delete Profile",
+        description: "Deletes a profile.")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteProfile(string id)
@@ -214,7 +268,9 @@ public class ProfilesController : ControllerBase
         {
             _logger.LogInformation("Deleting profile with ID: {ProfileId}", id);
 
-            var result = await _profileCommandService.DeleteProfileAsync(id);
+            var command = DeleteProfileCommandFromResourceAssembler.ToCommandFromResource(id);
+
+            var result = await _profileCommandService.Handle(command);
 
             if (!result)
             {

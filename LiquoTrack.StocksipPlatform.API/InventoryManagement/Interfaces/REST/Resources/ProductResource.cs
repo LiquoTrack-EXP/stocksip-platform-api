@@ -12,6 +12,7 @@ public record ProductResource(
         string Code,
         int MinimumStock,
         int TotalStockInStore,
+        decimal Content,
         string ImageUrl,
         string AccountId,
         string SupplierId,

@@ -62,36 +62,29 @@ public class InventoryImageService : IInventoryImageService
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
             throw new ArgumentException("Image URL cannot be null or empty.", nameof(imageUrl));
-        
+
         var protectedImages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            // Default Products Image
             "Default-product_kt9bxf",
-            
-            // Default Warehouse Image
             "Default-warehouse_qdgvkw"
         };
 
         try
         {
             var uri = new Uri(imageUrl);
-            var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length < 3)
-                throw new ArgumentException("Invalid Cloudinary URL format.");
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             
-            var uploadIndex = Array.IndexOf(parts, "upload");
-            if (uploadIndex < 0 || uploadIndex + 1 >= parts.Length)
+            var uploadIndex = Array.IndexOf(segments, "upload");
+            if (uploadIndex < 0)
                 throw new ArgumentException("Invalid Cloudinary URL structure - missing 'upload' segment.");
             
-            var versionIndex = uploadIndex + 1;
-            var publicIdWithExtension = parts[versionIndex + 1];
-            var fileName = Path.GetFileNameWithoutExtension(publicIdWithExtension);
-        
+            var resourcePath = string.Join("/", segments.Skip(uploadIndex + 2));
+            
+            var publicId = Path.ChangeExtension(resourcePath, null);
+            
+            var fileName = Path.GetFileName(publicId);
             if (protectedImages.Contains(fileName))
                 return false;
-            
-            var publicId = fileName;
 
             var deletionParams = new DeletionParams(publicId);
             var result = _cloudinary.Destroy(deletionParams);

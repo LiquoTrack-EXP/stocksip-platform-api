@@ -1,4 +1,5 @@
-﻿using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Model.Aggregates;
+﻿using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Model.Aggregates;
 using MongoDB.Bson;
 
 namespace LiquoTrack.StocksipPlatform.API.ProfileManagement.Domain.Repositories;
@@ -80,4 +81,15 @@ public interface IProfileRepository
     ///     A task representing the asynchronous operation.
     /// </returns>
     Task<string> FindProfilePictureUrlByIdAsync(ObjectId profileId);
+
+    /// <summary>
+    ///     Method to find all users by account ID.
+    /// </summary>
+    /// <param name="userId">
+    ///     The ID of the account to find users for.  
+    /// </param>
+    /// <returns>
+    ///     A list of users for the specified account.
+    /// </returns>
+    Task<IEnumerable<Profile>> FindAllByUserIdAsync(string userId);
 }

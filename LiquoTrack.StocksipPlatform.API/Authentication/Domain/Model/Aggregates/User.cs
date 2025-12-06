@@ -1,3 +1,4 @@
+using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.Entities;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
@@ -14,7 +15,7 @@ namespace LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates
  *     This class is used to represent a user
  * </remarks>
  */
-public class User : Entity
+public partial class User : Entity
 {
     /// <summary>
     ///     The user email.
@@ -57,14 +58,21 @@ public class User : Entity
     /// <param name="accountId">
     ///     The account id of the user is associated with.
     /// </param>
-    public User(Email email, string username, string hashedPassword, string accountId)
+    /// <param name="userRole">
+    ///     The user role.
+    /// </param>
+    public User(Email email, string username, string hashedPassword, string accountId, string userRole)
     {
         Email = email;
         Username = username;
         Password = hashedPassword;
         AccountId = new AccountId(accountId);
-        UserRole = EUserRoles.Admin;
+        if (!Enum.TryParse<EUserRoles>(userRole, out var role))
+            throw new ArgumentException("Invalid user role.", nameof(userRole));
+
+        UserRole = role;
     }
+    
     /**
      * <summary>
      *     Changes the password of the user

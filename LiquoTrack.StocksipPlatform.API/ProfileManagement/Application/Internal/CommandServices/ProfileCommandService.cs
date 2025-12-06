@@ -103,23 +103,23 @@ public class ProfileCommandService(
     /// <summary>
     /// Method to delete a profile.
     /// </summary>
-    /// <param name="profileId">
-    /// The ID of the profile to delete.
+    /// <param name="command">
+    ///  The command containing the ID of the profile to delete.
     /// </param>
     /// <returns>
     /// True if the profile was deleted successfully; otherwise, false.
     /// </returns>
-    public async Task<bool> DeleteProfileAsync(string profileId)
+    public async Task<bool> Handle(DeleteProfileByIdCommand command)
     {
         // Verifies that the profile exists
-        var profileToDelete = await profileRepository.FindByIdAsync(profileId);
+        var profileToDelete = await profileRepository.FindByIdAsync(command.ProfileId);
         
         if (profileToDelete == null)
         {
             return false;
         }
         
-        var imageUrl = await profileRepository.FindProfilePictureUrlByIdAsync(ObjectId.Parse(profileId));
+        var imageUrl = await profileRepository.FindProfilePictureUrlByIdAsync(ObjectId.Parse(command.ProfileId));
 
         // Tries to delete the profile from the repository
         try
@@ -131,7 +131,7 @@ public class ProfileCommandService(
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw new InvalidOperationException($"Failed to delete profile with ID: {profileId}", e);
+            throw new InvalidOperationException($"Failed to delete profile with ID: {command.ProfileId}", e);
         }
         
         return true;

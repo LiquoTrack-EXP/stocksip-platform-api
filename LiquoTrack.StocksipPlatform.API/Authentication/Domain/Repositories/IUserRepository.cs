@@ -45,4 +45,26 @@ public interface IUserRepository : IBaseRepository<User>
     /// <returns>True if the user exists; otherwise, false.</returns>
     bool ExistsByUsername(string username);
     
+    /// <summary>
+    ///     Method to get all users by account ID.
+    /// </summary>
+    /// <param name="accountId">
+    ///     The ID of the account to find users for.   
+    /// </param>
+    /// <returns>
+    ///     A list of users for the specified account.
+    /// </returns>
+    Task<IEnumerable<User?>> GetUsersByAccountIdAsync(string accountId);
+    
+    /// <summary>
+    ///     Method to count the number of users associated with a specific account ID.
+    /// </summary>
+    /// <param name="accountId">
+    ///     The unique identifier of the account.
+    /// </param>
+    /// <returns>
+    ///     A task that represents the asynchronous operation, containing the count of users.   
+    /// </returns>
+    Task<int> CountByAccountIdAsync(AccountId accountId);
+    
 }

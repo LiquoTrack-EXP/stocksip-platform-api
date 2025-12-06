@@ -17,10 +17,13 @@ public interface IProductRepository : IBaseRepository<Product>
     /// <param name="name">
     ///     The name of the product to check for existence.
     /// </param>
+    /// <param name="accountId">
+    ///     The ID of the account to check for existence.
+    /// </param>
     /// <returns>
     ///     True if a product with the specified name exists; otherwise, false.
     /// </returns>
-    Task<bool> ExistsByNameAsync(ProductName name);
+    Task<bool> ExistsByNameAndAccountIdAsync(ProductName name, AccountId accountId);
 
     /// <summary>
     ///     Method to check if a product exists by a given ID.
@@ -78,4 +81,15 @@ public interface IProductRepository : IBaseRepository<Product>
     ///     A string containing the image URL.
     /// </returns>
     Task<string> FindImageUrlByProductIdAsync(ObjectId productId);
+    
+    /// <summary>
+    ///     This method counts the number of products associated with a specific account ID.
+    /// </summary>
+    /// <param name="accountId">
+    ///     The unique identifier of the account.
+    /// </param>
+    /// <returns>
+    ///     A task that represents the asynchronous operation, containing the count of products.
+    /// </returns>
+    Task<int> CountByAccountIdAsync(AccountId accountId);
 }

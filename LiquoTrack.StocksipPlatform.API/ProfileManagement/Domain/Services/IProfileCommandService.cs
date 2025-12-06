@@ -25,7 +25,7 @@ public interface IProfileCommandService
     /// <summary>
     /// Handles deleting a profile by its ID.
     /// </summary>
-    /// <param name="profileId">The ID of the profile to delete.</param>
+    /// <param name="profileIdCommand">The ID of the profile to delete.</param>
     /// <returns>True if the profile was deleted; otherwise, false.</returns>
-    Task<bool> DeleteProfileAsync(string profileId);
+    Task<bool> Handle(DeleteProfileByIdCommand profileIdCommand);
 }

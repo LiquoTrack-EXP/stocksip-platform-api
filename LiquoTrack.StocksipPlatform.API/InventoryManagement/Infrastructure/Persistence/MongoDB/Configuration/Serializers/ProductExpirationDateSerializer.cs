@@ -10,11 +10,18 @@ public class ProductExpirationDateSerializer : IBsonSerializer<ProductExpiration
 {
     public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, ProductExpirationDate value)
     {
+        if (value == null)
+        {
+            context.Writer.WriteNull();
+            return;
+        }
+
         var date = value.GetValue();
         var dateTime = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var milliseconds = new DateTimeOffset(dateTime).ToUnixTimeMilliseconds();
         context.Writer.WriteDateTime(milliseconds);
     }
+
 
     public ProductExpirationDate Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
