@@ -19,7 +19,7 @@ public record ProfileResource(
     string FullName,
     string PhoneNumber,
     string ContactNumber,
-    string ProfilePictureUrl,
+    string? ProfilePictureUrl,
     string UserId,
     string AssignedRole
 );
