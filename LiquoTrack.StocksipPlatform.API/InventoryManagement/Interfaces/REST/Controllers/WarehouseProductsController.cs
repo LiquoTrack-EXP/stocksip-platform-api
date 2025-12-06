@@ -260,19 +260,17 @@ public class WarehouseProductsController(
     {
         if (!ObjectId.TryParse(warehouseId, out var warehouseObjId)) return BadRequest("Invalid warehouse ID.");
         if (!ObjectId.TryParse(productId, out var productObjId)) return BadRequest("Invalid product ID.");
-
-        var exitType = Enum.Parse<EProductExitReasons>(resource.ExitType);
         
-        Inventory? inventory;
+        Inventory? inventory = null;
         if (resource.ExpirationDate.HasValue)
         {
-            var expiration = new ProductExpirationDate(DateOnly.FromDateTime(resource.ExpirationDate.Value));
-            var cmd = new DecreaseProductsFromWarehouseCommand(productObjId, warehouseObjId, expiration, resource.QuantityToDecrease, exitType);
+            var cmd = DecreaseProductsFromWarehouseCommandFromResourceAssembler.ToCommandFromResource(resource, productId, warehouseId);
             inventory = await inventoryCommandService.Handle(cmd);
         }
-        else
+        
+        if (!resource.ExpirationDate.HasValue)
         {
-            var cmd = new DecreaseProductsFromWarehouseWithoutExpirationDateCommand(productObjId, warehouseObjId, resource.QuantityToDecrease, exitType);
+            var cmd = DecreaseProductsFromWarehouseCommandFromResourceAssembler.ToCommandFromResourceWithoutExpirationDate(resource, productId, warehouseId);
             inventory = await inventoryCommandService.Handle(cmd);
         }
 
