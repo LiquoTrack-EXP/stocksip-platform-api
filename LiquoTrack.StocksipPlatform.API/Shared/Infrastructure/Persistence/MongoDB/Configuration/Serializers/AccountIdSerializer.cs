@@ -1,4 +1,5 @@
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
 namespace LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Configuration.Serializers;
@@ -10,16 +11,27 @@ public class AccountIdSerializer : IBsonSerializer<AccountId>
 {
     public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, AccountId value)
     {
+        if (value == null)
+        {
+            context.Writer.WriteNull();
+            return;
+        }
         context.Writer.WriteString(value.GetId);
     }
 
     public AccountId Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
-        var value = context.Reader.ReadString();
-        if (string.IsNullOrEmpty(value))
+        var bsonType = context.Reader.GetCurrentBsonType();
+        if (bsonType == BsonType.Null)
         {
-            throw new InvalidOperationException("AccountId cannot be null or empty");
+            context.Reader.ReadNull();
+            return AccountId.Create("UNKNOWN");
         }
+
+        var value = context.Reader.ReadString();
+        if (string.IsNullOrWhiteSpace(value))
+            return AccountId.Create("UNKNOWN");
+
         return AccountId.Create(value);
     }
 

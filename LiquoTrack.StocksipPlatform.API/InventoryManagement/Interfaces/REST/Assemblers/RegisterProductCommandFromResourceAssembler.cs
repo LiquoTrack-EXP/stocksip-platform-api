@@ -24,6 +24,10 @@ public static class RegisterProductCommandFromResourceAssembler
     /// </returns>
     public static RegisterProductCommand ToCommandFromResource(RegisterProductResource resource, string accountId)
     {
+        var supplierId = string.IsNullOrWhiteSpace(resource.SupplierId)
+            ? null
+            : AccountId.Create(resource.SupplierId);
+
         return new RegisterProductCommand(
                 resource.Name,
                 Enum.Parse<EProductTypes>(resource.Type),
@@ -32,8 +36,8 @@ public static class RegisterProductCommandFromResourceAssembler
                 new ProductMinimumStock(resource.MinimumStock),
                 new ProductContent(resource.Content),
                 resource.Image,
-                new AccountId(accountId),
-                new AccountId(resource.SupplierId ?? "")
+                AccountId.Create(accountId),
+                supplierId
             );
     }
 }

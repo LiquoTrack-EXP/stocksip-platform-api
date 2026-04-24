@@ -15,5 +15,5 @@ public record RegisterProductCommand(
         ProductContent Content,
         IFormFile? Image,
         AccountId AccountId,
-        AccountId SupplierId
+        AccountId? SupplierId
     );

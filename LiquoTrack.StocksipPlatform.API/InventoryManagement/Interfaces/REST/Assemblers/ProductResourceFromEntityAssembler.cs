@@ -32,7 +32,7 @@ public static class ProductResourceFromEntityAssembler
                 entity.Content.GetValue(),
                 entity.ImageUrl.GetValue(),
                 entity.AccountId.GetId,
-                entity.SupplierId.GetId,
+                entity.SupplierId?.GetId ?? string.Empty,
                 entity.IsInWarehouse
             );
     }
