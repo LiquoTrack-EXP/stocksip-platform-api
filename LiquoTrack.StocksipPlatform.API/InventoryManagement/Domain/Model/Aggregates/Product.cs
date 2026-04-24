@@ -19,7 +19,7 @@ public class Product(
     ProductContent content,
     ImageUrl imageUrl,
     AccountId accountId,
-    AccountId? supplierId
+    AccountId supplierId
 ) : Entity
 {
     /// <summary>

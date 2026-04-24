@@ -81,8 +81,6 @@ public class SubscriptionQueryService(
     public async Task<(Subscription?, Plan?)> Handle(GetSubscriptionByAccountIdQuery query)
     {
         var subscription = await subscriptionRepository.FindByAccountIdAsync(query.AccountId);
-        if (subscription is null) return (null, null);
-        
         var currentPlan = await planRepository.FindByIdAsync(subscription.PlanId);
         return (subscription, currentPlan);
     }
