@@ -108,15 +108,28 @@ public class BaseRepository<T>(AppDbContext context, IMediator mediator) : IBase
     /// </returns>
     public async Task PublishEventsAsync(T aggregate)
     {
-        ArgumentNullException.ThrowIfNull(aggregate);
+        if (aggregate == null)
+        {
+            Console.WriteLine("Warning: aggregate is null, no events to publish.");
+            return;
+        }
+
+        if (aggregate.DomainEvents == null || aggregate.DomainEvents.Count == 0)
+            return;
 
         var domainEvents = aggregate.DomainEvents.ToList();
-
         aggregate.ClearDomainEvents();
 
         foreach (var domainEvent in domainEvents)
         {
-            await _mediator.PublishAsync(domainEvent);
+            try
+            {
+                await _mediator.PublishAsync(domainEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error publishing the event {domainEvent.GetType().Name}: {ex}");
+            }
         }
     }
 }

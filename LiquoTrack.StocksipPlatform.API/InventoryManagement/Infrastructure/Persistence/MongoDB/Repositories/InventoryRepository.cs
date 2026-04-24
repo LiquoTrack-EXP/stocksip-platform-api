@@ -38,12 +38,15 @@ public class InventoryRepository(AppDbContext context, IMediator mediator)
     public async Task<Inventory?> GetByProductIdWarehouseIdAndExpirationDateAsync(
         ObjectId productId, ObjectId warehouseId, ProductExpirationDate expirationDate)
     {
-        var expirationDateValue = expirationDate.GetValue();
+        var day = expirationDate.GetValue();
+        var startUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endUtc = day.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
         var filter = Builders<Inventory>.Filter.And(
             Builders<Inventory>.Filter.Eq(x => x.ProductId, productId),
             Builders<Inventory>.Filter.Eq(x => x.WarehouseId, warehouseId),
-            Builders<Inventory>.Filter.Eq("ExpirationDate.Value", expirationDateValue)
+            Builders<Inventory>.Filter.Gte("ExpirationDate", startUtc),
+            Builders<Inventory>.Filter.Lt("ExpirationDate", endUtc)
         );
 
         return await _inventoryCollection.Find(filter).FirstOrDefaultAsync();

@@ -9,8 +9,9 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Comma
 /// </summary>
 public record UpdateProductInformationCommand(
         ObjectId ProductId,
-        string Name,
-        Money UnitPrice,
-        ProductMinimumStock MinimumStock,
+        string? Name,
+        Money? UnitPrice,
+        ProductMinimumStock? MinimumStock,
+        ProductContent? Content,
         IFormFile? Image
     );

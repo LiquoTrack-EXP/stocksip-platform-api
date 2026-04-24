@@ -11,6 +11,6 @@ public record UpdateProfileResource(
     string FirstName,
     string LastName,
     string PhoneNumber,
-    IFormFile ProfilePicture,
+    IFormFile? ProfilePicture,
     string AssignedRole
 );

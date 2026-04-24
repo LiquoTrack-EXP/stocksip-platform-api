@@ -22,6 +22,9 @@ public static class DecreaseProductsFromWarehouseCommandFromResourceAssembler
     /// <param name="warehouseId">
     ///     The warehouse id as string.
     /// </param>
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown if resource.ExpirationDate is null.
+    /// </exception>
     /// <returns>
     ///     A new instance of DecreaseProductsFromWarehouseCommand.   
     /// </returns>

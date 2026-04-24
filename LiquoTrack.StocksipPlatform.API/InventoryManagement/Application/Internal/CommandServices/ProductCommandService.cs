@@ -5,6 +5,7 @@ using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Exception
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Interfaces.ACL.Services;
 
 namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Internal.CommandServices;
 
@@ -23,7 +24,8 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Intern
 public class ProductCommandService(
         IProductRepository productRepository,
         IInventoryImageService inventoryImageService,
-        IInventoryRepository inventoryRepository
+        IInventoryRepository inventoryRepository,
+        IPaymentAndSubscriptionsFacade paymentAndSubscriptionsFacade
     ) : IProductCommandService
 {
     /// <summary>
@@ -39,11 +41,21 @@ public class ProductCommandService(
     public async Task<Product?> Handle(RegisterProductCommand command)
     {
         // Verifies that the product name is unique.
-        if (await productRepository.ExistsByNameAsync(new ProductName(command.Name)))
+        if (await productRepository.ExistsByNameAndAccountIdAsync(new ProductName(command.Name), command.AccountId))
         {
-            throw new ProductFailedCreationException("This ${command.Name} is taken by another product. Cannot create a new product with the same name.");
+            throw new ProductFailedCreationException($"This {command.Name} is taken by another product. Cannot create a new product with the same name.");
         }
         
+        // Verifies that the account has not reached the maximum number of warehouses.
+        var currentProductsCount = await productRepository.CountByAccountIdAsync(command.AccountId);
+        
+        var maxAllowedProducts = await paymentAndSubscriptionsFacade
+            .GetPlanWarehouseLimitByAccountId(command.AccountId.GetId);
+        
+        if (maxAllowedProducts != 0 && currentProductsCount >= maxAllowedProducts)
+            throw new ProductFailedCreationException($"The account {command.AccountId.GetId} has reached the maximum number of products for the current plan.");
+        
+        // Gets the image url of the warehouse.
         string imageUrl = command.Image != null
             ? inventoryImageService.UploadImage(command.Image)
             : "https://res.cloudinary.com/deuy1pr9e/image/upload/v1759709979/Default-product_kt9bxf.png";
@@ -80,32 +92,32 @@ public class ProductCommandService(
         // Verifies that the product exists.
         var productToUpdate = await productRepository.FindByIdAsync(command.ProductId.ToString())
                               ?? throw new ProductFailedUpdateException($"Could not find the product to update with identifier ${command.ProductId.ToString()}.");
-        
+    
+        // Gets current image URL
         var currentImageUrl = await productRepository.FindImageUrlByProductIdAsync(command.ProductId);
         var imageUrl = currentImageUrl;
 
+        // Updates image only if a new one is provided
         if (command.Image != null)
         {
             inventoryImageService.DeleteImage(currentImageUrl);
             imageUrl = inventoryImageService.UploadImage(command.Image);
         }
-        
-        // Updates the product with the given details.
+    
+        // Updates the product partially
         productToUpdate.UpdateInformation(command, imageUrl);
 
-        // Tries to update the product in the repository.
+        // Updates in repository
         try
         {
             await productRepository.UpdateAsync(command.ProductId.ToString(), productToUpdate);
         }
-        // If the product could not be updated, throws an exception.
         catch (ProductFailedUpdateException e)
         {
             Console.WriteLine(e);
             throw;
         }
-        
-        // Returns the updated product.
+    
         return productToUpdate;
     }
 
