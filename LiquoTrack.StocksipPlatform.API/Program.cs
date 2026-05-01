@@ -142,7 +142,8 @@ builder.Services.AddCors(options =>
         policyBuilder.WithOrigins(
                 "https://localhost:7164",
                 "http://localhost:5283",
-                "https://localhost:44355")
+                "https://localhost:44355",
+                "https://stocksip-front-end-application-navy.vercel.app")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
