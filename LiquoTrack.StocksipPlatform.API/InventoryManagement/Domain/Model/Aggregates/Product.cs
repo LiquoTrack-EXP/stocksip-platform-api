@@ -1,4 +1,4 @@
-﻿using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.Entities;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
@@ -19,7 +19,9 @@ public class Product(
     ProductContent content,
     ImageUrl imageUrl,
     AccountId accountId,
-    AccountId supplierId
+    AccountId? supplierId = null,
+    int totalStockInStore = 0,
+    bool isInWarehouse = false
 ) : Entity
 {
     /// <summary>
@@ -56,12 +58,12 @@ public class Product(
     /// <summary>
     ///     The total stock in the store. Which sums up the stock of the product in all the warehouses.
     /// </summary>
-    public int TotalStockInStore { get; private set; } = 0;
+    public int TotalStockInStore { get; set; } = totalStockInStore;
     
     /// <summary>
     ///     Indicates if the product is in the warehouse.
     /// </summary>
-    public bool IsInWarehouse { get; private set; } = false;
+    public bool IsInWarehouse { get; set; } = isInWarehouse;
     
     /// <summary>
     ///     The image url of the product.

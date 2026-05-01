@@ -1,4 +1,4 @@
-﻿using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Events;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Events;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.Entities;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
@@ -114,8 +114,18 @@ public class Inventory(
     public void AddStockToProduct(int addedStock, int productMinimumStock)
     {
         if (addedStock <= 0) throw new ArgumentException("Stock cannot be negative");
-        if (Quantity.GetValue == 0) SetProductStateToWithStock();
-        if (productMinimumStock > Quantity.GetValue + addedStock) SetProductStateToWithStock();
+        
+        var newStock = Quantity.GetValue + addedStock;
+        
+        if (newStock > productMinimumStock && CurrentState != EProductStates.WithStock)
+        {
+            SetProductStateToWithStock();
+        }
+        else if (newStock > 0 && newStock <= productMinimumStock && CurrentState != EProductStates.LowStock)
+        {
+            SetProductStateToLowStock();
+        }
+        
         Quantity = Quantity.AddStock(addedStock);
     }
 
@@ -144,7 +154,7 @@ public class Inventory(
         if (Quantity.GetValue < removedStock) throw new ArgumentException("Insufficient stock to remove");
 
         // Checks if the product is below minimum stock after removal. If so, it should trigger a domain event to generate an alert.
-        if (productMinimumStock >= Quantity.GetValue - removedStock)
+        if (productMinimumStock >= Quantity.GetValue - removedStock && CurrentState != EProductStates.LowStock && CurrentState != EProductStates.OutOfStock)
         {
             // Sets the state of the product to low stock
             SetProductStateToLowStock();
@@ -161,7 +171,7 @@ public class Inventory(
         }
         
         // Checks if the product stock is zero after the removal. If so, it should trigger a domain event to generate an alert.
-        if (Quantity.GetValue - removedStock == 0)
+        if (Quantity.GetValue - removedStock == 0 && CurrentState != EProductStates.OutOfStock)
         {
             // Sets the state of the product to out of stock
             SetProductStateToOutOfStock();
