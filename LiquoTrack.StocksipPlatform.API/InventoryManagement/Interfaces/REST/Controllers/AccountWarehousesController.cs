@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Assemblers;
@@ -67,10 +67,21 @@ public class AccountWarehousesController(
     [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid input data.")]
     public async Task<IActionResult> RegisterWarehouse([FromForm] RegisterWarehouseResource resource, [FromRoute] string accountId)
     {
-        var registerWarehouseCommand = RegisterWarehouseCommandFromResourceAssembler.ToCommandFromResource(resource, accountId);
-        var warehouse = await warehouseCommandService.Handle(registerWarehouseCommand);
-        if (warehouse is null) return BadRequest("Warehouse could not be registered.");
-        var warehouseResource = WarehouseResourceFromEntityAssembler.ToResourceFromEntity(warehouse);
-        return Ok(warehouseResource);
+        try
+        {
+            var registerWarehouseCommand = RegisterWarehouseCommandFromResourceAssembler.ToCommandFromResource(resource, accountId);
+            var warehouse = await warehouseCommandService.Handle(registerWarehouseCommand);
+            if (warehouse is null) return BadRequest("Warehouse could not be registered.");
+            var warehouseResource = WarehouseResourceFromEntityAssembler.ToResourceFromEntity(warehouse);
+            return Ok(warehouseResource);
+        }
+        catch (LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Exceptions.WarehouseFailedCreationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

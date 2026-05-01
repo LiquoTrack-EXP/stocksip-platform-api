@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
@@ -75,11 +75,22 @@ public class WarehousesController(
     public async Task<IActionResult> UpdateWarehouse([FromRoute] string warehouseId,
         [FromForm] UpdateWarehouseInformationResource resource)
     {
-        var updateWarehouseCommand = UpdateWarehouseInformationCommandFromResourceAssembler.ToCommandFromResource(warehouseId, resource);
-        var warehouse = await warehouseCommandService.Handle(updateWarehouseCommand);
-        if (warehouse is null) return NotFound($"Warehouse with ID {warehouseId} not found.");
-        var warehouseResource = WarehouseResourceFromEntityAssembler.ToResourceFromEntity(warehouse);
-        return Ok(warehouseResource);
+        try
+        {
+            var updateWarehouseCommand = UpdateWarehouseInformationCommandFromResourceAssembler.ToCommandFromResource(warehouseId, resource);
+            var warehouse = await warehouseCommandService.Handle(updateWarehouseCommand);
+            if (warehouse is null) return NotFound($"Warehouse with ID {warehouseId} not found.");
+            var warehouseResource = WarehouseResourceFromEntityAssembler.ToResourceFromEntity(warehouse);
+            return Ok(warehouseResource);
+        }
+        catch (LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Exceptions.WarehouseFailedUpdateException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -100,8 +111,15 @@ public class WarehousesController(
     [SwaggerResponse(StatusCodes.Status404NotFound, "Warehouse with the specified ID was not found.")]
     public async Task<IActionResult> DeleteWarehouse([FromRoute] string warehouseId)
     {
-        var deleteWarehouseCommand = new DeleteWarehouseCommand(warehouseId);
-        await warehouseCommandService.Handle(deleteWarehouseCommand);
-        return NoContent();
+        try
+        {
+            var deleteWarehouseCommand = new DeleteWarehouseCommand(warehouseId);
+            await warehouseCommandService.Handle(deleteWarehouseCommand);
+            return NoContent();
+        }
+        catch (LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Exceptions.WarehouseFailedDeletionException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

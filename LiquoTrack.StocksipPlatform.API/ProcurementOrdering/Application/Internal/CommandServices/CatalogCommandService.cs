@@ -72,25 +72,31 @@ public class CatalogCommandService : ICatalogCommandService
                       ?? throw new InvalidOperationException($"Product with ID {command.ProductId} not found");
 
         int stockToAssign = command.Stock > 0 ? command.Stock
-            : (await _productContextFacade.GetProductStockInWarehouseAsync(command.ProductId, command.WarehouseId)) 
-              ?? throw new InvalidOperationException($"No inventory found for product {command.ProductId} in warehouse {command.WarehouseId}");
+            : (await _productContextFacade.GetProductStockInWarehouseAsync(command.ProductId, command.WarehouseId)) ?? 0;
 
         var productObjectId = new ObjectId(command.ProductId);
         var warehouseObjectId = new ObjectId(command.WarehouseId);
         
-        var inventoryItem = await _inventoryRepository.GetByProductIdWarehouseIdAsync(productObjectId, warehouseObjectId)
-                            ?? throw new InvalidOperationException($"No inventory found for product {command.ProductId} in warehouse {command.WarehouseId}");
+        var inventoryItem = await _inventoryRepository.GetByProductIdWarehouseIdAsync(productObjectId, warehouseObjectId);
 
-        if (inventoryItem.Quantity.GetValue < stockToAssign)
-            throw new InvalidOperationException($"Insufficient stock in inventory for product {command.ProductId}. Available: {inventoryItem.Quantity.GetValue}, Requested: {stockToAssign}");
-        
-        var accountIdString = await _warehouseRepository.FindAccountIdByWarehouseIdAsync(command.WarehouseId);
-        var accountId = new AccountId(accountIdString);
+        if (stockToAssign > 0)
+        {
+            if (inventoryItem == null)
+                throw new InvalidOperationException($"Insufficient stock in inventory for product {command.ProductId}. Available: 0, Requested: {stockToAssign}");
 
-        var minimumStock = product.MinimumStock;
-        
-        inventoryItem.DecreaseStockFromProduct(stockToAssign, minimumStock, accountId);
-        await _inventoryRepository.UpdateAsync(inventoryItem);
+            if (inventoryItem.Quantity.GetValue < stockToAssign)
+                throw new InvalidOperationException($"Insufficient stock in inventory for product {command.ProductId}. Available: {inventoryItem.Quantity.GetValue}, Requested: {stockToAssign}");
+            
+            var accountIdString = await _warehouseRepository.FindAccountIdByWarehouseIdAsync(command.WarehouseId);
+            var accountId = new AccountId(accountIdString);
+            var minimumStock = product.MinimumStock;
+            
+            inventoryItem.DecreaseStockFromProduct(stockToAssign, minimumStock, accountId);
+            await _inventoryRepository.UpdateAsync(inventoryItem);
+            
+            // Updates the global product total stock
+            await _productContextFacade.UpdateProductTotalStockAsync(command.ProductId, stockToAssign);
+        }
         
         catalog.AddItem(product.Id, product.Name, product.UnitPrice, product.Currency, product.ImageUrl, stockToAssign);
         await _catalogRepository.UpdateAsync(catalog);

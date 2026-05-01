@@ -29,4 +29,11 @@ public interface IProductContextFacade
     /// <param name="warehouseId">The ID of the warehouse.</param>
     /// <returns>A resource containing inventory information, or null if not found.</returns>
     Task<InventoryDetailsResource?> GetInventoryDetailsAsync(string productId, string warehouseId);
+
+    /// <summary>
+    /// Updates the total stock of a product in the store.
+    /// </summary>
+    /// <param name="productId">The ID of the product.</param>
+    /// <param name="quantityToDecrease">The quantity to subtract from total stock.</param>
+    Task UpdateProductTotalStockAsync(string productId, int quantityToDecrease);
 }
