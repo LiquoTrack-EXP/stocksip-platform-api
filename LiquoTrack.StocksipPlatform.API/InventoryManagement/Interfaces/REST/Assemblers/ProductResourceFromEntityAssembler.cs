@@ -1,4 +1,4 @@
-﻿using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Resources;
 
@@ -32,7 +32,7 @@ public static class ProductResourceFromEntityAssembler
                 entity.Content.GetValue(),
                 entity.ImageUrl.GetValue(),
                 entity.AccountId.GetId,
-                entity.SupplierId.GetId,
+                entity.SupplierId?.GetId ?? string.Empty,
                 entity.IsInWarehouse
             );
     }

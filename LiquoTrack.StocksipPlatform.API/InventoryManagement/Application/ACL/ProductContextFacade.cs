@@ -1,4 +1,5 @@
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Queries;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Services;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.ACL;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Interfaces.REST.Resources;
@@ -13,15 +14,18 @@ public class ProductContextFacade : IProductContextFacade
 {
     private readonly IProductQueryService _productQueryService;
     private readonly IInventoryQueryService _inventoryQueryService;
+    private readonly IProductRepository _productRepository;
     private readonly ILogger<ProductContextFacade> _logger;
 
     public ProductContextFacade(
         IProductQueryService productQueryService,
         IInventoryQueryService inventoryQueryService,
+        IProductRepository productRepository,
         ILogger<ProductContextFacade> logger)
     {
         _productQueryService = productQueryService ?? throw new ArgumentNullException(nameof(productQueryService));
         _inventoryQueryService = inventoryQueryService ?? throw new ArgumentNullException(nameof(inventoryQueryService));
+        _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -160,6 +164,34 @@ public class ProductContextFacade : IProductContextFacade
             _logger.LogError(ex, "Error fetching inventory details for product {ProductId} in warehouse {WarehouseId}", 
                 productId, warehouseId);
             throw new InvalidOperationException("An error occurred while fetching inventory details.", ex);
+        }
+    }
+
+    public async Task UpdateProductTotalStockAsync(string productId, int quantityToDecrease)
+    {
+        if (!ObjectId.TryParse(productId, out var objectId))
+            throw new ArgumentException("Invalid product ID format.", nameof(productId));
+
+        try
+        {
+            _logger.LogInformation("Updating total stock for product {ProductId}, reducing by {Quantity}", productId, quantityToDecrease);
+            
+            var product = await _productRepository.FindByIdAsync(productId);
+            if (product == null)
+            {
+                _logger.LogWarning("Product {ProductId} not found during stock update.", productId);
+                return;
+            }
+
+            product.UpdateTotalStockInStore(product.TotalStockInStore - quantityToDecrease);
+            await _productRepository.UpdateAsync(product.Id.ToString(), product);
+            
+            _logger.LogInformation("Successfully updated total stock for product {ProductId}", productId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating total stock for product {ProductId}", productId);
+            throw new InvalidOperationException("An error occurred while updating product total stock.", ex);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Cortex.Mediator.Commands;
+using Cortex.Mediator.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Entities;
@@ -36,24 +36,19 @@ public class InventoryCommandService(
     {
         try
         {
-            // Validate if the product exists
             var product = await productRepository.FindByIdAsync(command.ProductId.ToString())
                 ?? throw new ArgumentException($"Product with ID {command.ProductId} does not exist.");
-        
-            // Validate if the warehouse exists
+
             var warehouse = await warehouseRepository.FindByIdAsync(command.WarehouseId.ToString())
                 ?? throw new ArgumentException($"Warehouse with ID {command.WarehouseId} does not exist.");
-            
-            // Validate if the expiration date is provided
+
             if (command.ExpirationDate == null)
             {
                 throw new ArgumentException("Expiration date is required when adding products with expiration date.");
             }
 
-            // Updates the product 'totalStockInWarehouse' field
             product.UpdateTotalStockInStore(product.GetStockInStorage() + command.QuantityToAdd);
             
-            // Validate if the inventory already exists
             var inventory = await inventoryRepository.GetByProductIdWarehouseIdAndExpirationDateAsync(command.ProductId,
                     command.WarehouseId, command.ExpirationDate);
 
@@ -63,6 +58,7 @@ public class InventoryCommandService(
                 var productStock = new ProductStock(command.QuantityToAdd);
                 var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock, command.ExpirationDate);
                 await inventoryRepository.AddAsync(newInventory);
+                await productRepository.UpdateAsync(product.Id.ToString(), product);
                 return newInventory;
             }
         
@@ -111,6 +107,7 @@ public class InventoryCommandService(
                 var productStock = new ProductStock(command.QuantityToAdd);
                 var newInventory = new Inventory(command.ProductId, command.WarehouseId, productStock, null);
                 await inventoryRepository.AddAsync(newInventory);
+                await productRepository.UpdateAsync(product.Id.ToString(), product);
                 return newInventory;
             }
         
@@ -160,7 +157,7 @@ public class InventoryCommandService(
             var previousStock = inventoryToUpdate.GetStock();
             
             // Updates the product 'totalStockInWarehouse' field
-            productToUpdate.UpdateTotalStockInStore(previousStock - command.QuantityToDecrease);
+            productToUpdate.UpdateTotalStockInStore(productToUpdate.GetStockInStorage() - command.QuantityToDecrease);
             
             // Decreases the stock of the product in the inventory.
             inventoryToUpdate.DecreaseStockFromProduct(

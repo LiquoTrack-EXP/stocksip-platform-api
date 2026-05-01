@@ -1,4 +1,4 @@
-﻿using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Entities;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Model.Queries;
 using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Repositories;
@@ -81,6 +81,7 @@ public class SubscriptionQueryService(
     public async Task<(Subscription?, Plan?)> Handle(GetSubscriptionByAccountIdQuery query)
     {
         var subscription = await subscriptionRepository.FindByAccountIdAsync(query.AccountId);
+        if (subscription is null) return (null, null);
         var currentPlan = await planRepository.FindByIdAsync(subscription.PlanId);
         return (subscription, currentPlan);
     }

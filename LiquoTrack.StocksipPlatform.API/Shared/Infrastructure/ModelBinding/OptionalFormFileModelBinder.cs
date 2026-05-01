@@ -12,10 +12,15 @@ public class OptionalFormFileModelBinder : IModelBinder
         if (bindingContext.ModelType != typeof(IFormFile))
             return Task.CompletedTask;
 
+        if (!bindingContext.HttpContext.Request.HasFormContentType)
+        {
+            bindingContext.Result = ModelBindingResult.Success(null);
+            return Task.CompletedTask;
+        }
+
         var file = bindingContext.HttpContext.Request.Form.Files
             .FirstOrDefault(f => f.Name.Equals(bindingContext.ModelName, StringComparison.OrdinalIgnoreCase));
 
-        // If file exists and has content, bind it; otherwise bind null
         var result = (file?.Length > 0) ? file : null;
         bindingContext.Result = ModelBindingResult.Success(result);
 
