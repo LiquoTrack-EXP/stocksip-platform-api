@@ -1,5 +1,6 @@
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
+using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
 using MongoDB.Bson;
 using NUnit.Framework;
 
@@ -56,6 +57,50 @@ public class InventoryTest
 
         // Assert
         Assert.That(inventory.GetStock(), Is.EqualTo(15));
+    }
+
+    [Test]
+    public void DecreaseStockFromProductShouldSetStateToLowStockWhenBelowMinimum()
+    {
+        // Arrange
+        var inventory = new Inventory(
+            productId: ObjectId.GenerateNewId(),
+            warehouseId: ObjectId.GenerateNewId(),
+            quantity: new ProductStock(10),
+            expirationDate: null
+        );
+        var minimumStock = 7;
+        var removedStock = 4; 
+        var accountId = new AccountId("acc_001");
+
+        // Act
+        inventory.DecreaseStockFromProduct(removedStock, minimumStock, accountId);
+
+        // Assert
+        Assert.That(inventory.GetStock(), Is.EqualTo(6));
+        Assert.That(inventory.CurrentState, Is.EqualTo(EProductStates.LowStock));
+    }
+
+    [Test]
+    public void DecreaseStockFromProductShouldSetStateToOutOfStockWhenStockIsZero()
+    {
+        // Arrange
+        var inventory = new Inventory(
+            productId: ObjectId.GenerateNewId(),
+            warehouseId: ObjectId.GenerateNewId(),
+            quantity: new ProductStock(3),
+            expirationDate: null
+        );
+        var minimumStock = 1;
+        var removedStock = 3;
+        var accountId = new AccountId("acc_001");
+
+        // Act
+        inventory.DecreaseStockFromProduct(removedStock, minimumStock, accountId);
+
+        // Assert
+        Assert.That(inventory.GetStock(), Is.EqualTo(0));
+        Assert.That(inventory.CurrentState, Is.EqualTo(EProductStates.OutOfStock));
     }
     
     // Integration Test

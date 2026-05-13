@@ -3,6 +3,7 @@ using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregate
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
+using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.Exceptions;
 using NUnit.Framework;
 
 namespace LiquoTrack.StocksipPlatform.Tests.InventoryManagement.Domain.Model.Aggregates;
@@ -34,7 +35,17 @@ public class WarehouseTest
         Assert.That(warehouse.Temperature, Is.EqualTo(command.Temperature));
         Assert.That(warehouse.AccountId, Is.EqualTo(command.AccountId));
         Assert.That(warehouse.ImageUrl.GetValue(), Is.EqualTo(imageUrl));
+    }
 
+    [Test]
+    public void ConstructingWarehouseTemperatureWithInvalidRangeShouldThrowException()
+    {
+        // Arrange
+        var min = 10m;
+        var max = 5m;
+
+        // Act & Assert
+        Assert.Throws<ValueObjectValidationException>(() => new WarehouseTemperature(min, max));
     }
     
     // Integration Test

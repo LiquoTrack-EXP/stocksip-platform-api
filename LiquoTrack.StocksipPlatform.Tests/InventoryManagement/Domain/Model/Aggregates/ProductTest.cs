@@ -2,6 +2,7 @@ using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregate
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
+using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.Exceptions;
 using NUnit.Framework;
 
 namespace LiquoTrack.StocksipPlatform.Tests.InventoryManagement.Domain.Model.Aggregates;
@@ -45,6 +46,19 @@ public class ProductTest
         Assert.That(product.TotalStockInStore, Is.EqualTo(0));
         Assert.That(product.IsInWarehouse, Is.False);
         Assert.That(product.ImageUrl.GetValue(), Is.EqualTo(imageUrl));
+    }
+
+    [Test]
+    public void ConstructingMoneyOrProductMinimumStockWithNegativeValueShouldThrowException()
+    {
+        // Arrange
+        var negativeAmount = -10.5m;
+        var currency = new Currency("PEN");
+        var negativeMinimumStock = -5;
+
+        // Act & Assert
+        Assert.Throws<ValueObjectValidationException>(() => new Money(negativeAmount, currency));
+        Assert.Throws<ValueObjectValidationException>(() => new ProductMinimumStock(negativeMinimumStock));
     }
     
     // Integration Test
