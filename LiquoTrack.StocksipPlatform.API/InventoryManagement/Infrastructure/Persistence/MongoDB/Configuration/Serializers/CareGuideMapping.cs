@@ -11,13 +11,17 @@ namespace LiquoTrack.StocksipPlatform.API.InventoryManagement.Infrastructure.Per
 /// </summary>
 public class CareGuideMapping : IEntityTypeConfiguration<CareGuide>
 {
-    public void Configure(EntityTypeBuilder<CareGuide> builder){}
+    public void Configure(EntityTypeBuilder<CareGuide> builder) { }
+
+    private static readonly object RegisterLock = new();
 
     public static void ConfigureBsonMapping()
     {
-        if (BsonClassMap.IsClassMapRegistered(typeof(CareGuide))) return;
-        
-        BsonClassMap.RegisterClassMap<CareGuide>(map =>
+        lock (RegisterLock)
+        {
+            if (BsonClassMap.IsClassMapRegistered(typeof(CareGuide))) return;
+            
+            BsonClassMap.RegisterClassMap<CareGuide>(map =>
         {
             map.AutoMap();
             
@@ -36,10 +40,9 @@ public class CareGuideMapping : IEntityTypeConfiguration<CareGuide>
             map.MapMember(x => x.FileName).SetElementName("fileName");
             map.MapMember(x => x.FileContentType).SetElementName("fileContentType");
             map.MapMember(x => x.FileData).SetElementName("fileData");
-            map.MapMember(x => x.FileContentType).SetElementName("guideFileContentType"); 
-            map.MapMember(x => x.FileName).SetElementName("guideFileUrl"); 
             map.MapMember(x => x.ProductName).SetElementName("productName");
             map.MapMember(x => x.ImageUrl).SetElementName("imageUrl");
         });
+        }
     }
 }
