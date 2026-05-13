@@ -1,28 +1,41 @@
+using FluentValidation.Validators;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
 using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
+using NUnit.Framework;
 
 namespace LiquoTrack.StocksipPlatform.Tests.InventoryManagement.Domain.Model.Aggregates;
 
+[TestFixture]
+[TestOf(typeof(Warehouse))]
 public class WarehouseTest
 {
-    [Fact]
-    public void Constructor_ValidInputs_ShouldCreateWarehouse()
+    // Unit Test
+    [Test]
+    public void CreateWarehouseShouldSetAllPropertiesCorrectly()
     {
-        var name = "Main Warehouse";
-        var address = new WarehouseAddress("Av. Principal 123", "Lima", "Miraflores", "15074", "Peru");
-        var temperature = new WarehouseTemperature(1, 5);
-        var capacity = new WarehouseCapacity(1000);
-        var imageUrl = new ImageUrl("https://example.com/warehouse.png");
-        var accountId = new AccountId("acc-123");
+        var command = new RegisterWarehouseCommand(
+            "Main Warehouse",
+            new WarehouseAddress("Lima", "Av. Peru 123", "Villa el salvador", "12345", "Peru"),
+            new WarehouseTemperature(2, 8),
+            new WarehouseCapacity(1000),
+            null,
+            new AccountId("acc_001")
+        );
 
-        var warehouse = new Warehouse(name, address, temperature, capacity, imageUrl, accountId);
+        var imageUrl = "https://res.cloudinary.com/deuy1pr9e/image/upload/v1759709826/Default-warehouse_qdgvkw.jpg";
 
-        Assert.Equal(name, warehouse.Name);
-        Assert.Equal(address, warehouse.Address);
-        Assert.Equal(temperature, warehouse.Temperature);
-        Assert.Equal(capacity, warehouse.Capacity);
-        Assert.Equal(imageUrl, warehouse.ImageUrl);
-        Assert.Equal(accountId, warehouse.AccountId);
+        var warehouse = new Warehouse(command, imageUrl);
+
+        Assert.That(warehouse.Name, Is.EqualTo("Main Warehouse"));
+        Assert.That(warehouse.Address, Is.EqualTo(command.Address));
+        Assert.That(warehouse.Capacity, Is.EqualTo(command.Capacity));
+        Assert.That(warehouse.Temperature, Is.EqualTo(command.Temperature));
+        Assert.That(warehouse.AccountId, Is.EqualTo(command.AccountId));
+        Assert.That(warehouse.ImageUrl.GetValue(), Is.EqualTo(imageUrl));
+
     }
+    
+    // Integration Test
 }
