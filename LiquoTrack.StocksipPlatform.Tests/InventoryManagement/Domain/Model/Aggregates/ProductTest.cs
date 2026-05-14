@@ -60,6 +60,4 @@ public class ProductTest
         Assert.Throws<ValueObjectValidationException>(() => new Money(negativeAmount, currency));
         Assert.Throws<ValueObjectValidationException>(() => new ProductMinimumStock(negativeMinimumStock));
     }
-    
-    // Integration Test
 }

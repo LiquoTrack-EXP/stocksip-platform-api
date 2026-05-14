@@ -102,6 +102,4 @@ public class InventoryTest
         Assert.That(inventory.GetStock(), Is.EqualTo(0));
         Assert.That(inventory.CurrentState, Is.EqualTo(EProductStates.OutOfStock));
     }
-    
-    // Integration Test
 }

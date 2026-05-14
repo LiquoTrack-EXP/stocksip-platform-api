@@ -21,32 +21,44 @@ public class AuthenticationControllerIntegrationTest : IClassFixture<CustomWebAp
     [Fact]
     public async Task RegisterAndLogin_ShouldReturnJwtToken()
     {
-        // Arrange
+        // Arrange 
+        var uniqueId     = Guid.NewGuid().ToString("N")[..8];
+        var email        = $"test_{uniqueId}@stocksip.com";
+        var businessName = $"Test Business {uniqueId}";
+
         var registerData = new 
         { 
-            email = "test@stocksip.com", 
-            password = "Password123!", 
-            name = "Test User",
-            businessName = "Test Business",
-            role = "Admin" // Using Admin as a valid role from EUserRoles
+            email        = email,
+            password     = "Password123!", 
+            name         = "Test User",
+            businessName = businessName,
+            role         = "LiquorStoreOwner" 
         };
 
-        var loginData = new { email = "test@stocksip.com", password = "Password123!" };
+        var loginData = new 
+        { 
+            email    = email,
+            password = "Password123!" 
+        };
 
-        // Act
-        // 1. Register
+        // Act 
         var regResponse = await _client.PostAsJsonAsync("/api/v1/sign-up", registerData);
-        
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, regResponse.StatusCode);
+        var regBody     = await regResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            regResponse.IsSuccessStatusCode,
+            $"Register failed — Status: {regResponse.StatusCode} | Body: {regBody}"
+        );
 
         // Act
-        // 2. Login
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/sign-in", loginData);
-        
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var loginBody     = await loginResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            loginResponse.IsSuccessStatusCode,
+            $"Login failed — Status: {loginResponse.StatusCode} | Body: {loginBody}"
+        );
+
+        // Assert 
         var body = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(body.TryGetProperty("token", out _));
+        Assert.True(body.TryGetProperty("token", out _), "Response does not contain 'token'");
     }
 }

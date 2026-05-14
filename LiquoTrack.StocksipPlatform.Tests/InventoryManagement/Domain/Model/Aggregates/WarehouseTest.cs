@@ -1,4 +1,5 @@
 using FluentValidation.Validators;
+using LiquoTrack.StocksipPlatform.API.InventoryManagement.Application.Internal.CommandServices;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Aggregates;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.Commands;
 using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Model.ValueObjects;
@@ -47,6 +48,4 @@ public class WarehouseTest
         // Act & Assert
         Assert.Throws<ValueObjectValidationException>(() => new WarehouseTemperature(min, max));
     }
-    
-    // Integration Test
 }
