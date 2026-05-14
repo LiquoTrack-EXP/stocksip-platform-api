@@ -2,30 +2,59 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
-using LiquoTrack.StocksipPlatform.API.Shared.Infrastructure.Persistence.MongoDB.Seeding;
-using LiquoTrack.StocksipPlatform.API.InventoryManagement.Domain.Repositories;
-using LiquoTrack.StocksipPlatform.API.PaymentAndSubscriptions.Domain.Repositories;
+using LiquoTrack.StocksipPlatform.API.Authentication.Application.Internal.OutboundServices.Token;
+using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Aggregates;
+using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Model.Queries;
+using LiquoTrack.StocksipPlatform.API.Authentication.Domain.Services;
+using LiquoTrack.StocksipPlatform.API.Shared.Domain.Model.ValueObjects;
 
 namespace LiquoTrack.StocksipPlatform.IntegrationTests;
 
 public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> where TProgram : class
 {
+    public const string TestUserId  = "test-user-id-001";
+    public const string TestToken   = "test-token";
+    public const string TestAccount = "acc_001";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
-            // Add Test Authentication Scheme BEFORE any JWT Bearer registration
-            // This will override JWT since we add it first
-            services.AddAuthentication("Test")
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
+            var mockTokenService = new Mock<ITokenService>();
+            mockTokenService
+                .Setup(s => s.ValidateToken(TestToken))
+                .ReturnsAsync(TestUserId);  
+            services.RemoveAll<ITokenService>();
+            services.AddSingleton(mockTokenService.Object);
+            
+            var fakeUser = BuildFakeUser();
 
-            // Remove SubscriptionsExpirationJob to prevent background task crashes
-            var hostedServiceDescriptor = services.FirstOrDefault(d => 
+            var mockUserQueryService = new Mock<IUserQueryService>();
+            mockUserQueryService
+                .Setup(s => s.Handle(It.IsAny<GetUserByIdQuery>()))
+                .ReturnsAsync(fakeUser);
+
+            services.RemoveAll<IUserQueryService>();
+            services.AddScoped(_ => mockUserQueryService.Object);
+            
+            var hostedServiceDescriptor = services.FirstOrDefault(d =>
                 d.ImplementationType?.Name.Contains("SubscriptionsExpirationJob") ?? false);
-            if (hostedServiceDescriptor != null) 
+            if (hostedServiceDescriptor != null)
                 services.Remove(hostedServiceDescriptor);
         });
+    }
+
+    private static User BuildFakeUser()
+    {
+        var email = new Email("test@test.com");
+        return new User(
+            email:          email,
+            username:       "testuser",
+            hashedPassword: "HashedPassword123!",
+            accountId:      TestAccount,
+            userRole:       "Admin"   
+        );
     }
 }
